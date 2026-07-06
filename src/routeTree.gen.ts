@@ -10,9 +10,13 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UsersRouteImport } from './routes/users'
+import { Route as ShiftsRouteImport } from './routes/shifts'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as ReceiptsRouteImport } from './routes/receipts'
 import { Route as ProductsRouteImport } from './routes/products'
 import { Route as PosRouteImport } from './routes/pos'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as DeveloperRouteImport } from './routes/developer'
 import { Route as CustomersRouteImport } from './routes/customers'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -21,9 +25,19 @@ const UsersRoute = UsersRouteImport.update({
   path: '/users',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShiftsRoute = ShiftsRouteImport.update({
+  id: '/shifts',
+  path: '/shifts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReceiptsRoute = ReceiptsRouteImport.update({
+  id: '/receipts',
+  path: '/receipts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProductsRoute = ProductsRouteImport.update({
@@ -34,6 +48,16 @@ const ProductsRoute = ProductsRouteImport.update({
 const PosRoute = PosRouteImport.update({
   id: '/pos',
   path: '/pos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeveloperRoute = DeveloperRouteImport.update({
+  id: '/developer',
+  path: '/developer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CustomersRoute = CustomersRouteImport.update({
@@ -50,49 +74,89 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/customers': typeof CustomersRoute
+  '/developer': typeof DeveloperRoute
+  '/login': typeof LoginRoute
   '/pos': typeof PosRoute
   '/products': typeof ProductsRoute
+  '/receipts': typeof ReceiptsRoute
   '/reports': typeof ReportsRoute
+  '/shifts': typeof ShiftsRoute
   '/users': typeof UsersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/customers': typeof CustomersRoute
+  '/developer': typeof DeveloperRoute
+  '/login': typeof LoginRoute
   '/pos': typeof PosRoute
   '/products': typeof ProductsRoute
+  '/receipts': typeof ReceiptsRoute
   '/reports': typeof ReportsRoute
+  '/shifts': typeof ShiftsRoute
   '/users': typeof UsersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/customers': typeof CustomersRoute
+  '/developer': typeof DeveloperRoute
+  '/login': typeof LoginRoute
   '/pos': typeof PosRoute
   '/products': typeof ProductsRoute
+  '/receipts': typeof ReceiptsRoute
   '/reports': typeof ReportsRoute
+  '/shifts': typeof ShiftsRoute
   '/users': typeof UsersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/customers' | '/pos' | '/products' | '/reports' | '/users'
+  fullPaths:
+    | '/'
+    | '/customers'
+    | '/developer'
+    | '/login'
+    | '/pos'
+    | '/products'
+    | '/receipts'
+    | '/reports'
+    | '/shifts'
+    | '/users'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/customers' | '/pos' | '/products' | '/reports' | '/users'
+  to:
+    | '/'
+    | '/customers'
+    | '/developer'
+    | '/login'
+    | '/pos'
+    | '/products'
+    | '/receipts'
+    | '/reports'
+    | '/shifts'
+    | '/users'
   id:
     | '__root__'
     | '/'
     | '/customers'
+    | '/developer'
+    | '/login'
     | '/pos'
     | '/products'
+    | '/receipts'
     | '/reports'
+    | '/shifts'
     | '/users'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CustomersRoute: typeof CustomersRoute
+  DeveloperRoute: typeof DeveloperRoute
+  LoginRoute: typeof LoginRoute
   PosRoute: typeof PosRoute
   ProductsRoute: typeof ProductsRoute
+  ReceiptsRoute: typeof ReceiptsRoute
   ReportsRoute: typeof ReportsRoute
+  ShiftsRoute: typeof ShiftsRoute
   UsersRoute: typeof UsersRoute
 }
 
@@ -105,11 +169,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shifts': {
+      id: '/shifts'
+      path: '/shifts'
+      fullPath: '/shifts'
+      preLoaderRoute: typeof ShiftsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reports': {
       id: '/reports'
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/receipts': {
+      id: '/receipts'
+      path: '/receipts'
+      fullPath: '/receipts'
+      preLoaderRoute: typeof ReceiptsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/products': {
@@ -124,6 +202,20 @@ declare module '@tanstack/react-router' {
       path: '/pos'
       fullPath: '/pos'
       preLoaderRoute: typeof PosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/developer': {
+      id: '/developer'
+      path: '/developer'
+      fullPath: '/developer'
+      preLoaderRoute: typeof DeveloperRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/customers': {
@@ -146,9 +238,13 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CustomersRoute: CustomersRoute,
+  DeveloperRoute: DeveloperRoute,
+  LoginRoute: LoginRoute,
   PosRoute: PosRoute,
   ProductsRoute: ProductsRoute,
+  ReceiptsRoute: ReceiptsRoute,
   ReportsRoute: ReportsRoute,
+  ShiftsRoute: ShiftsRoute,
   UsersRoute: UsersRoute,
 }
 export const routeTree = rootRouteImport

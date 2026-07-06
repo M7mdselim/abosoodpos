@@ -4,15 +4,13 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
-  HeadContent,
-  Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect } from "react";
 
-import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { RoleProvider } from "@/context/RoleContext";
-import { AppSidebar } from "@/components/AppSidebar";
+import { RoleProvider, useSession } from "@/context/RoleContext";
+import { LanguageProvider, useLanguage } from "@/context/LanguageContext";
+import { AppNavbar } from "@/components/AppNavbar";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -76,56 +74,44 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "OilPro POS — Automotive Service Center" },
-      { name: "description", content: "Point of sale for automotive oil and filter service centers." },
-      { property: "og:title", content: "OilPro POS" },
-      { property: "og:description", content: "Fast touchscreen POS for oil change service centers." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-    links: [
-      { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
-    ],
-  }),
-  shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });
-
-function RootShell({ children }: { children: ReactNode }) {
-  return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  );
-}
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RoleProvider>
-        <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
-          <AppSidebar />
-          <main className="flex-1 overflow-hidden">
-            <Outlet />
-          </main>
-        </div>
-        <Toaster richColors position="top-center" />
-      </RoleProvider>
+      <LanguageProvider>
+        <RoleProvider>
+          <LayoutWrapper />
+        </RoleProvider>
+      </LanguageProvider>
     </QueryClientProvider>
+  );
+}
+
+function LayoutWrapper() {
+  const { session } = useSession();
+
+  if (!session) {
+    return (
+      <div className="min-h-screen w-full bg-background text-foreground">
+        <Outlet />
+        <Toaster richColors position="top-center" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-background text-foreground">
+      <AppNavbar />
+      <main className="flex-1 overflow-hidden relative">
+        <Outlet />
+      </main>
+      <Toaster richColors position="top-center" />
+    </div>
   );
 }

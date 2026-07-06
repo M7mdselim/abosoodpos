@@ -1,20 +1,27 @@
 import type { Customer } from "@/types";
 
-const firstNames = ["Ahmed", "Mohammed", "Ali", "Omar", "Yousef", "Khaled", "Hassan", "Fahad", "Saeed", "Nasser", "Salem", "Majed", "Turki", "Bandar", "Faisal", "Sultan", "Waleed", "Ibrahim", "Abdullah", "Rashed", "Sami", "Tariq", "Marwan", "Ziad", "Rami"];
-const lastNames = ["Al-Harbi", "Al-Otaibi", "Al-Qahtani", "Al-Ghamdi", "Al-Zahrani", "Al-Shehri", "Al-Malki", "Al-Dosari", "Al-Amri", "Al-Sulami", "Al-Anzi", "Al-Rashidi", "Al-Mutairi", "Al-Shammari", "Al-Juhani"];
+const firstNames = ["أحمد", "محمد", "علي", "عمر", "يوسف", "خالد", "حسن", "عمرو", "مصطفى", "إبراهيم", "تامر", "شريف", "أيمن", "سامح", "كريم", "هاني", "وائل", "محمود", "عادل", "رائد", "هشام", "حاتم", "ممدوح", "ياسر", "رامي"];
+const lastNames = ["المنشاوي", "الشناوي", "عبد الفتاح", "الشربيني", "الفيومي", "عبد العزيز", "الجارحي", "التهامي", "سليمان", "شعلان", "غنيم", "عتمان", "الباز", "حجازي", "بكري"];
 const carBrands = [
-  { brand: "Toyota", models: ["Camry", "Corolla", "Hilux", "Land Cruiser", "Yaris", "RAV4"] },
-  { brand: "Hyundai", models: ["Elantra", "Sonata", "Tucson", "Accent", "Santa Fe"] },
-  { brand: "Nissan", models: ["Altima", "Sunny", "Patrol", "X-Trail", "Sentra"] },
-  { brand: "Kia", models: ["Cerato", "Sportage", "Sorento", "Rio", "Optima"] },
-  { brand: "Honda", models: ["Accord", "Civic", "CR-V", "Pilot"] },
-  { brand: "Ford", models: ["Explorer", "Edge", "F-150", "Escape"] },
-  { brand: "Chevrolet", models: ["Tahoe", "Suburban", "Malibu", "Silverado"] },
-  { brand: "Mazda", models: ["CX-5", "Mazda3", "Mazda6", "CX-9"] },
-  { brand: "Lexus", models: ["ES 350", "LX 570", "RX 350", "GX 460"] },
-  { brand: "GMC", models: ["Yukon", "Sierra", "Terrain"] },
+  { brand: "تويوتا", models: ["كورولا", "ياريس", "كامري", "راف فور", "هيلوكس"] },
+  { brand: "هيونداي", models: ["إلنترا", "فيرنا", "توسان", "أكسنت", "سانتا في"] },
+  { brand: "نيسان", models: ["صني", "سنترا", "قشقاي", "تيدا", "جوك"] },
+  { brand: "كيا", models: ["سيراتو", "سبورتاج", "ريو", "سول", "بيكانتو"] },
+  { brand: "شيفروليه", models: ["أوبترا", "أفيو", "لانوس", "كابتيفا", "دبابة"] },
+  { brand: "ميتسوبيشي", models: ["لانسر شارك", "أتراج", "إكليبس", "باجيرو"] },
+  { brand: "رينو", models: ["لوجان", "ميغان", "داستر", "كادجار"] },
+  { brand: "فيات", models: ["تيبو", "500", "بونتو"] },
+  { brand: "سوزوكي", models: ["سويفت", "ديزاير", "ارتيجا", "ماروتي"] },
+  { brand: "سكودا", models: ["أوكتافيا", "سوبرب", "كودياك"] },
 ];
-const oils = ["Shell HX8 5W-30", "Shell Helix Ultra 5W-40", "Mobil 1 ESP 5W-30", "Castrol Magnatec 5W-30", "Total Quartz 9000 5W-40", "Mobil Super 3000 5W-40"];
+const oils = [
+  "زيت شيل هيلكس HX8 5W-30",
+  "زيت شيل هيلكس الترا 5W-40",
+  "زيت موبيل 1 ESP 5W-30",
+  "زيت كاسترول ماجناتيك 5W-30",
+  "زيت توتال كوارتز 9000 5W-40",
+  "زيت موبيل سوبر 3000 5W-40"
+];
 
 function pick<T>(arr: T[], i: number): T {
   return arr[i % arr.length];
@@ -33,10 +40,15 @@ export const mockCustomers: Customer[] = Array.from({ length: 50 }, (_, i) => {
   const daysAgo = 5 + (i * 11) % 240;
   const date = new Date();
   date.setDate(date.getDate() - daysAgo);
+  
+  // Egyptian operator prefixes: 010, 011, 012, 015
+  const operator = pick(["10", "11", "12", "15"], i);
+  const phoneSuffix = pad(1000000 + i * 98765, 8).slice(0, 8);
+
   return {
     id: `c${i + 1}`,
     name: `${first} ${last}`,
-    phone: `05${pad(10000000 + i * 123457, 8).slice(0, 8)}`,
+    phone: `0${operator}${phoneSuffix}`,
     carBrand: cb.brand,
     carModel: model,
     currentKm: km,

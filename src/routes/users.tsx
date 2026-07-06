@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -21,8 +21,18 @@ import { Switch } from "@/components/ui/switch";
 import { userService } from "@/services/userService";
 import type { User, UserRole } from "@/types";
 import { useSession } from "@/context/RoleContext";
+import { authService } from "@/services/authService";
 
 export const Route = createFileRoute("/users")({
+  beforeLoad: () => {
+    if (!authService.isAuthenticated()) {
+      throw redirect({ to: "/login" });
+    }
+    const session = authService.getSession();
+    if (session?.role !== "admin" && session?.role !== "developer") {
+      throw redirect({ to: "/pos" });
+    }
+  },
   component: UsersPage,
 });
 
@@ -32,7 +42,9 @@ function UsersPage() {
   const [creating, setCreating] = useState(false);
   const list = userService.list();
 
-  if (session.role !== "admin") {
+  const isAdminOrDev = session?.role === "admin" || session?.role === "developer";
+
+  if (!isAdminOrDev) {
     return (
       <PageShell title="Users">
         <div className="text-center text-muted-foreground py-16">
@@ -128,7 +140,7 @@ function NewUserDialog({
       toast.error("Enter a name");
       return;
     }
-    userService.create({ name, role, status: "active" });
+    userService.create({ name, role: role as any, status: "active" });
     toast.success("User created");
     onCreated();
     onOpenChange(false);
@@ -154,6 +166,7 @@ function NewUserDialog({
               <SelectContent>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="cashier">Cashier</SelectItem>
+                <SelectItem value="developer">Developer</SelectItem>
               </SelectContent>
             </Select>
           </div>

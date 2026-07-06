@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search, Eye } from "lucide-react";
 
@@ -19,7 +19,14 @@ import { saleService } from "@/services/saleService";
 import type { Customer } from "@/types";
 import { formatCurrency, formatDateTime } from "@/utils/format";
 
+import { authService } from "@/services/authService";
+
 export const Route = createFileRoute("/customers")({
+  beforeLoad: () => {
+    if (!authService.isAuthenticated()) {
+      throw redirect({ to: "/login" });
+    }
+  },
   component: CustomersPage,
 });
 
@@ -49,27 +56,33 @@ function CustomersPage() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Phone</TableHead>
-              <TableHead>Car Brand</TableHead>
-              <TableHead>Car Model</TableHead>
+              <TableHead>Registered Vehicles</TableHead>
               <TableHead>Last Visit</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {list.map((c) => (
-              <TableRow key={c.id}>
-                <TableCell className="font-semibold">{c.name}</TableCell>
-                <TableCell>{c.phone}</TableCell>
-                <TableCell>{c.carBrand}</TableCell>
-                <TableCell>{c.carModel}</TableCell>
-                <TableCell>{c.lastServiceDate ?? "—"}</TableCell>
-                <TableCell className="text-right">
-                  <Button size="sm" variant="outline" onClick={() => setSelected(c)}>
-                    <Eye className="mr-1 h-4 w-4" /> View
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {list.map((c) => {
+              const vehicleString = c.cars && c.cars.length > 0
+                ? c.cars.map((car) => `${car.brand} ${car.model}`).join(" / ")
+                : `${c.carBrand} ${c.carModel}`;
+
+              return (
+                <TableRow key={c.id}>
+                  <TableCell className="font-semibold">{c.name}</TableCell>
+                  <TableCell>{c.phone}</TableCell>
+                  <TableCell className="max-w-xs truncate" title={vehicleString}>
+                    {vehicleString}
+                  </TableCell>
+                  <TableCell>{c.lastServiceDate ?? "—"}</TableCell>
+                  <TableCell className="text-right">
+                    <Button size="sm" variant="outline" onClick={() => setSelected(c)}>
+                      <Eye className="mr-1 h-4 w-4" /> View
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
@@ -95,66 +108,99 @@ function CustomerDetails({
         <DialogHeader>
           <DialogTitle>{customer.name}</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           <section>
             <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">
               Customer Info
             </h3>
-            <div className="space-y-1 text-sm">
+            <div className="grid grid-cols-2 gap-4 text-sm bg-accent/40 p-3 rounded-lg border border-border">
               <Info label="Phone" value={customer.phone} />
-              <Info label="Last Visit" value={customer.lastServiceDate ?? "—"} />
-              <Info label="Last Oil Used" value={customer.lastOilUsed ?? "—"} />
+              <Info label="Total Visits" value={`${history.length} services`} />
             </div>
           </section>
+
           <section>
             <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">
-              Vehicle Info
+              Registered Vehicles ({customer.cars?.length || 1})
             </h3>
-            <div className="space-y-1 text-sm">
-              <Info label="Brand" value={customer.carBrand} />
-              <Info label="Model" value={customer.carModel} />
-              <Info label="Current KM" value={customer.currentKm.toLocaleString()} />
+            <div className="rounded-lg border border-border bg-background">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Brand</TableHead>
+                    <TableHead>Model</TableHead>
+                    <TableHead>Current KM</TableHead>
+                    <TableHead>Last Visit</TableHead>
+                    <TableHead>Last Oil Used</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(customer.cars || [
+                    {
+                      id: "default",
+                      brand: customer.carBrand,
+                      model: customer.carModel,
+                      currentKm: customer.currentKm,
+                      lastServiceDate: customer.lastServiceDate,
+                      lastOilUsed: customer.lastOilUsed,
+                    },
+                  ]).map((car) => (
+                    <TableRow key={car.id}>
+                      <TableCell className="font-semibold">{car.brand}</TableCell>
+                      <TableCell>{car.model}</TableCell>
+                      <TableCell>{car.currentKm.toLocaleString()} KM</TableCell>
+                      <TableCell>{car.lastServiceDate ?? "—"}</TableCell>
+                      <TableCell className="text-xs">{car.lastOilUsed ?? "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">
+              Service History ({history.length})
+            </h3>
+            <div className="max-h-60 overflow-auto rounded-lg border border-border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Vehicle</TableHead>
+                    <TableHead>Odometer</TableHead>
+                    <TableHead>Oil Used</TableHead>
+                    <TableHead>Services</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {history.map((s) => (
+                    <TableRow key={s.id}>
+                      <TableCell className="text-xs">{formatDateTime(s.date)}</TableCell>
+                      <TableCell className="font-medium text-xs">
+                        {s.carBrand} {s.carModel}
+                      </TableCell>
+                      <TableCell>{s.km.toLocaleString()} KM</TableCell>
+                      <TableCell className="text-xs">{s.oilUsed ?? "—"}</TableCell>
+                      <TableCell className="text-xs">{s.items.length} items</TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {formatCurrency(s.total)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {history.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
+                        No service history yet
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </section>
         </div>
-        <section className="mt-4">
-          <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">
-            Service History ({history.length})
-          </h3>
-          <div className="max-h-64 overflow-auto rounded-lg border border-border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>KM</TableHead>
-                  <TableHead>Oil Used</TableHead>
-                  <TableHead>Services</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {history.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="text-xs">{formatDateTime(s.date)}</TableCell>
-                    <TableCell>{s.km.toLocaleString()}</TableCell>
-                    <TableCell className="text-xs">{s.oilUsed ?? "—"}</TableCell>
-                    <TableCell className="text-xs">{s.items.length} items</TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {formatCurrency(s.total)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {history.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
-                      No service history yet
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </section>
       </DialogContent>
     </Dialog>
   );
@@ -162,9 +208,9 @@ function CustomerDetails({
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-semibold">{value}</span>
+    <div className="flex justify-between w-full">
+      <span className="text-muted-foreground">{label}:</span>
+      <span className="font-bold">{value}</span>
     </div>
   );
 }

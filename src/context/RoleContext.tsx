@@ -1,36 +1,35 @@
-// Mock auth/role context. Replace with JWT + ASP.NET Core auth later.
 import { createContext, useContext, useState, type ReactNode } from "react";
-import type { UserRole } from "@/types";
-
-interface Session {
-  userId: string;
-  name: string;
-  role: UserRole;
-}
+import { authService, type SessionUser } from "@/services/authService";
 
 interface RoleContextValue {
-  session: Session;
-  setRole: (role: UserRole) => void;
+  session: SessionUser | null;
+  login: (username: string, password: string) => boolean;
+  logout: () => void;
 }
-
-const defaultSession: Session = {
-  userId: "u1",
-  name: "Admin User",
-  role: "admin",
-};
 
 const RoleContext = createContext<RoleContextValue | null>(null);
 
 export function RoleProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session>(defaultSession);
-  const setRole = (role: UserRole) =>
-    setSession(
-      role === "admin"
-        ? { userId: "u1", name: "Admin User", role: "admin" }
-        : { userId: "u2", name: "Ahmed (Cashier)", role: "cashier" },
-    );
+  const [session, setSession] = useState<SessionUser | null>(() => authService.getSession());
+
+  const login = (username: string, password: string): boolean => {
+    const user = authService.login(username, password);
+    if (user) {
+      setSession(user);
+      return true;
+    }
+    return false;
+  };
+
+  const logout = () => {
+    authService.logout();
+    setSession(null);
+  };
+
   return (
-    <RoleContext.Provider value={{ session, setRole }}>{children}</RoleContext.Provider>
+    <RoleContext.Provider value={{ session, login, logout }}>
+      {children}
+    </RoleContext.Provider>
   );
 }
 

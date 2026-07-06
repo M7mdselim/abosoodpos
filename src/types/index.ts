@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "cashier";
+export type UserRole = "developer" | "admin" | "cashier";
 
 export interface User {
   id: string;
@@ -25,18 +25,32 @@ export interface Product {
   buyingPrice: number;
   sellingPrice: number;
   stock: number;
+  oilMileage?: number; // Optional oil mileage (e.g. 5000, 10000)
+  isPopular?: boolean; // Fast access for cashier
+}
+
+export interface CustomerCar {
+  id: string;
+  brand: string;
+  model: string;
+  currentKm: number;
+  lastServiceDate?: string;
+  lastOilUsed?: string;
+  lastOilMileage?: number;
 }
 
 export interface Customer {
   id: string;
   name: string;
   phone: string;
-  carBrand: string;
-  carModel: string;
-  currentKm: number;
+  carBrand: string; // Default main car brand (for backward compatibility)
+  carModel: string; // Default main car model (for backward compatibility)
+  currentKm: number; // Default main car odometer (for backward compatibility)
   lastServiceDate?: string;
   lastOilUsed?: string;
+  lastOilMileage?: number;
   notes?: string;
+  cars?: CustomerCar[];
 }
 
 export interface InvoiceItem {
@@ -53,12 +67,15 @@ export interface Sale {
   id: string;
   invoiceNumber: string;
   date: string; // ISO
+  shiftDay?: string; // The operational "date" of the shift this sale belongs to (e.g. "2026-07-01")
   customerId: string;
   customerName: string;
   customerPhone: string;
   carBrand: string;
   carModel: string;
   km: number;
+  oilUsed?: string;
+  oilMileage?: number; // Optional mileage calculation helper
   cashierId: string;
   cashierName: string;
   items: InvoiceItem[];
@@ -67,5 +84,20 @@ export interface Sale {
   vat: number;
   total: number;
   paymentMethod: PaymentMethod;
-  oilUsed?: string;
+  status: "active" | "voided";
+}
+
+export interface Shift {
+  id: string;
+  openedAt: string;
+  closedAt?: string;
+  cashierId: string;
+  cashierName: string;
+  openingCash: number;
+  salesCash: number;
+  salesCard: number;
+  totalSales: number;
+  actualCash?: number;
+  difference?: number;
+  status: "open" | "closed";
 }

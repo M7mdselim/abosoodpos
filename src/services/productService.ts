@@ -18,12 +18,11 @@ export const productService = {
   get: (id: string) => store.products.find((p) => p.id === id),
   create: (data: Omit<Product, "id">): Product => {
     const product: Product = { ...data, id: `p${Date.now()}` };
-    store.products.unshift(product);
+    store.products = [product, ...store.products];
     return product;
   },
   update: (id: string, patch: Partial<Product>) => {
-    const idx = store.products.findIndex((p) => p.id === id);
-    if (idx >= 0) store.products[idx] = { ...store.products[idx], ...patch };
+    store.products = store.products.map((p) => (p.id === id ? { ...p, ...patch } : p));
   },
   remove: (id: string) => {
     store.products = store.products.filter((p) => p.id !== id);
