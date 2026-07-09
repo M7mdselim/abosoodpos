@@ -26,6 +26,10 @@ export const Route = createFileRoute("/customers")({
     if (!authService.isAuthenticated()) {
       throw redirect({ to: "/login" });
     }
+    const session = authService.getSession();
+    if (session?.role !== "admin" && session?.role !== "developer") {
+      throw redirect({ to: "/pos" });
+    }
   },
   component: CustomersPage,
 });

@@ -124,7 +124,7 @@ export const shiftService = {
     return active;
   },
 
-  recordSale(saleAmount: number, paymentMethod: "Cash" | "Card"): void {
+  recordSale(saleAmount: number, paymentMethod: "Cash" | "Card" | "Mixed", cashAmount?: number, cardAmount?: number): void {
     const shifts = this.getShifts();
     const activeIndex = shifts.findIndex((s) => s.status === "open");
     if (activeIndex === -1) return;
@@ -133,12 +133,12 @@ export const shiftService = {
     active.salesCount += 1;
     active.salesTotal += saleAmount;
 
-    if (paymentMethod === "Cash") {
-      active.cashSalesTotal += saleAmount;
-      active.expectedCash += saleAmount;
-    } else {
-      active.cardSalesTotal += saleAmount;
-    }
+    const actualCash = cashAmount !== undefined ? cashAmount : (paymentMethod === "Cash" ? saleAmount : 0);
+    const actualCard = cardAmount !== undefined ? cardAmount : (paymentMethod === "Card" ? saleAmount : 0);
+
+    active.cashSalesTotal += actualCash;
+    active.expectedCash += actualCash;
+    active.cardSalesTotal += actualCard;
 
     this.saveShifts(shifts);
   },

@@ -103,4 +103,3 @@ export const store = {
     localStorage.removeItem("app_shifts");
   },
 };
-export type { AppSettings };

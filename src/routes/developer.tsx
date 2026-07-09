@@ -72,6 +72,9 @@ function DeveloperControlsPage() {
   const handleSeedMockData = () => {
     const mockSeedSales = [
       {
+        id: `s_mock_${Date.now()}_1`,
+        invoiceNumber: "INV-999991",
+        date: new Date().toISOString(),
         customerId: "c1",
         customerName: "Mohamed Selim",
         customerPhone: "0500000001",
@@ -90,9 +93,13 @@ function DeveloperControlsPage() {
         total: 690,
         paymentMethod: "Cash" as const,
         oilUsed: "Castrol 5W-30",
-        shiftDay: new Date().toISOString().split("T")[0]
+        shiftDay: new Date().toISOString().split("T")[0],
+        status: "active" as const,
       },
       {
+        id: `s_mock_${Date.now()}_2`,
+        invoiceNumber: "INV-999992",
+        date: new Date().toISOString(),
         customerId: "c2",
         customerName: "Khalid Al-Ghamdi",
         customerPhone: "0500000002",
@@ -111,7 +118,8 @@ function DeveloperControlsPage() {
         total: 655.5,
         paymentMethod: "Card" as const,
         oilUsed: "Castrol 5W-30",
-        shiftDay: new Date().toISOString().split("T")[0]
+        shiftDay: new Date().toISOString().split("T")[0],
+        status: "active" as const,
       }
     ];
 
@@ -339,7 +347,7 @@ function DeveloperControlsPage() {
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="space-y-0.5">
                 <Label htmlFor="vat-toggle" className="font-semibold text-sm">
-                  {language === "ar" ? "حساب ضريبة القيمة المضافة (15%)" : "Enable VAT (15%)"}
+                  {language === "ar" ? "حساب ضريبة القيمة المضافة (14%)" : "Enable VAT (14%)"}
                 </Label>
                 <span className="text-xs text-muted-foreground block">
                   {language === "ar" ? "تطبيق وحساب الضريبة في الفواتير والتقارير" : "Apply tax calculation on checkout"}

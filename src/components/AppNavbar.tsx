@@ -1,5 +1,5 @@
 import { Link, useRouterState, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ShoppingCart,
   Users,
@@ -70,7 +70,7 @@ const categories: NavCategory[] = [
         label: "Customers",
         description: "View customer details and vehicle service logs.",
         icon: Users,
-        roles: ["developer", "admin", "cashier"],
+        roles: ["developer", "admin"],
       },
     ],
   },
@@ -129,6 +129,32 @@ export function AppNavbar() {
   const router = useRouter();
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const closeTimeoutRef = useRef<number | null>(null);
+
+  const handleMouseEnter = (key: string) => {
+    if (closeTimeoutRef.current) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setActiveDropdown(key);
+  };
+
+  const handleMouseLeave = () => {
+    if (closeTimeoutRef.current) {
+      window.clearTimeout(closeTimeoutRef.current);
+    }
+    closeTimeoutRef.current = window.setTimeout(() => {
+      setActiveDropdown(null);
+    }, 150);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) {
+        window.clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!session) return null;
 
@@ -173,8 +199,8 @@ export function AppNavbar() {
               <div
                 key={cat.key}
                 className="relative"
-                onMouseEnter={() => setActiveDropdown(cat.key)}
-                onMouseLeave={() => setActiveDropdown(null)}
+                onMouseEnter={() => handleMouseEnter(cat.key)}
+                onMouseLeave={handleMouseLeave}
               >
                 <button
                   className={cn(
@@ -190,41 +216,49 @@ export function AppNavbar() {
 
                 {/* Dropdown Card */}
                 {activeDropdown === cat.key && (
-                  <div className="absolute top-full left-0 mt-1.5 w-80 rounded-xl bg-card border border-border shadow-xl p-2 grid gap-1 animate-in fade-in slide-in-from-top-2 duration-150 z-50">
-                    {visibleItems.map((item) => {
-                      const active =
-                        pathname === item.to ||
-                        (item.to !== "/" && pathname.startsWith(item.to));
-                      const Icon = item.icon;
-                      return (
-                        <Link
-                          key={item.to}
-                          to={item.to}
-                          onClick={() => setActiveDropdown(null)}
-                          className={cn(
-                            "flex items-start gap-3.5 rounded-lg p-3 text-left transition-all duration-200",
-                            active
-                              ? "bg-primary text-primary-foreground shadow-sm"
-                              : "hover:bg-accent hover:text-accent-foreground"
-                          )}
-                        >
-                          <Icon className="h-5 w-5 mt-0.5 shrink-0" />
-                          <div>
-                            <div className="text-sm font-bold tracking-tight">{item.label}</div>
-                            <div
-                              className={cn(
-                                "text-[11px] mt-1 leading-snug font-medium",
-                                active
-                                  ? "text-primary-foreground/80"
-                                  : "text-muted-foreground"
-                              )}
-                            >
-                              {item.description}
+                  <div className="absolute top-full left-0 w-80 pt-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="rounded-xl bg-card border border-border shadow-xl p-2 grid gap-1">
+                      {visibleItems.map((item) => {
+                        const active =
+                          pathname === item.to ||
+                          (item.to !== "/" && pathname.startsWith(item.to));
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.to}
+                            to={item.to}
+                            onClick={() => {
+                              if (closeTimeoutRef.current) {
+                                window.clearTimeout(closeTimeoutRef.current);
+                                closeTimeoutRef.current = null;
+                              }
+                              setActiveDropdown(null);
+                            }}
+                            className={cn(
+                              "flex items-start gap-3.5 rounded-lg p-3 text-left transition-all duration-200",
+                              active
+                                ? "bg-primary text-primary-foreground shadow-sm"
+                                : "hover:bg-accent hover:text-accent-foreground"
+                            )}
+                          >
+                            <Icon className="h-5 w-5 mt-0.5 shrink-0" />
+                            <div>
+                              <div className="text-sm font-bold tracking-tight">{item.label}</div>
+                              <div
+                                className={cn(
+                                  "text-[11px] mt-1 leading-snug font-medium",
+                                  active
+                                    ? "text-primary-foreground/80"
+                                    : "text-muted-foreground"
+                                )}
+                              >
+                                {item.description}
+                              </div>
                             </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
+                          </Link>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

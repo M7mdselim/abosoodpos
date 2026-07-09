@@ -108,7 +108,9 @@ function ProductsPage() {
                   <div className="flex items-center gap-1.5">
                     <span>{p.name}</span>
                     {p.isPopular && (
-                      <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" title="شائع / سريع الوصول" />
+                      <span title="شائع / سريع الوصول">
+                        <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                      </span>
                     )}
                   </div>
                 </TableCell>

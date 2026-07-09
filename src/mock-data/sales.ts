@@ -42,7 +42,7 @@ export const mockSales: Sale[] = Array.from({ length: 300 }, (_, i) => {
   const subtotal = items.reduce((s, it) => s + it.quantity * it.unitPrice, 0);
   const discount = i % 10 === 0 ? Math.round(subtotal * 0.05) : 0;
   const taxable = subtotal - discount;
-  const vat = Math.round(taxable * 0.15);
+  const vat = Math.round(taxable * 0.14);
   const total = taxable + vat;
   const daysAgo = (i * 2) % 180;
   const date = new Date();
@@ -68,5 +68,6 @@ export const mockSales: Sale[] = Array.from({ length: 300 }, (_, i) => {
     total,
     paymentMethod: i % 2 === 0 ? "Cash" : "Card",
     oilUsed: oil?.name,
+    status: "active" as const,
   };
 });

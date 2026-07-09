@@ -61,7 +61,7 @@ export interface InvoiceItem {
   quantity: number;
 }
 
-export type PaymentMethod = "Cash" | "Card";
+export type PaymentMethod = "Cash" | "Card" | "Mixed";
 
 export interface Sale {
   id: string;
@@ -84,6 +84,8 @@ export interface Sale {
   vat: number;
   total: number;
   paymentMethod: PaymentMethod;
+  cashAmount?: number;
+  cardAmount?: number;
   status: "active" | "voided";
 }
 
