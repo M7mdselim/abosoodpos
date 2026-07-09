@@ -4,6 +4,7 @@ import { useSession } from "@/context/RoleContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { authService } from "@/services/authService";
 import { store } from "@/services/store";
+import { backendService } from "@/services/backendService";
 import { PageShell } from "@/components/PageShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ function DeveloperControlsPage() {
   const [phone, setPhone] = useState(currentSettings.phone);
   const [address, setAddress] = useState(currentSettings.address);
   const [shiftMode, setShiftMode] = useState<"single" | "multiple">(currentSettings.shiftMode || "multiple");
+  const [logoUrl, setLogoUrl] = useState(currentSettings.logoUrl || "");
 
   const handleResetDatabase = () => {
     if (confirm(language === "ar" ? "هل أنت متأكد من تصفير وإعادة تعيين قاعدة البيانات؟" : "Are you sure you want to reset the database?")) {
@@ -73,7 +75,7 @@ function DeveloperControlsPage() {
     const mockSeedSales = [
       {
         id: `s_mock_${Date.now()}_1`,
-        invoiceNumber: "INV-999991",
+        invoiceNumber: "999991",
         date: new Date().toISOString(),
         customerId: "c1",
         customerName: "Mohamed Selim",
@@ -98,7 +100,7 @@ function DeveloperControlsPage() {
       },
       {
         id: `s_mock_${Date.now()}_2`,
-        invoiceNumber: "INV-999992",
+        invoiceNumber: "999992",
         date: new Date().toISOString(),
         customerId: "c2",
         customerName: "Khalid Al-Ghamdi",
@@ -154,7 +156,8 @@ function DeveloperControlsPage() {
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
-    store.settings = {
+    const updated = {
+      ...currentSettings,
       companyNameAr,
       companyNameEn,
       sloganAr,
@@ -162,7 +165,10 @@ function DeveloperControlsPage() {
       phone,
       address,
       shiftMode,
+      logoUrl,
     };
+    store.settings = updated;
+    backendService.saveSettings(updated).catch((err) => console.error("Error saving settings in backend:", err));
     toast.success(
       language === "ar" ? "تم حفظ إعدادات الهوية بنجاح وتحديث النظام" : "Identity settings saved successfully!"
     );
@@ -286,6 +292,94 @@ function DeveloperControlsPage() {
                     <option value="multiple">ورديات متعددة يومياً (Multiple Shifts/Day)</option>
                     <option value="single">وردية واحدة يومياً (Single Shift/Day)</option>
                   </select>
+                </div>
+                <div className="space-y-2 text-left sm:col-span-2 border-t border-border pt-4">
+                  <Label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
+                    <span>{language === "ar" ? "شعار الشركة (المطبوع والمعروض)" : "Company Logo (Receipts & UI)"}</span>
+                  </Label>
+                  <div className="flex flex-col sm:flex-row items-center gap-4 bg-muted/30 p-3 rounded-lg border border-border">
+                    {logoUrl ? (
+                      <div className="relative shrink-0 w-20 h-20 rounded-full border border-border bg-white flex items-center justify-center overflow-hidden">
+                        <img src={logoUrl} alt="Logo Preview" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="shrink-0 w-20 h-20 rounded-full border border-dashed border-border bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                        {language === "ar" ? "بدون شعار" : "No Logo"}
+                      </div>
+                    )}
+                    <div className="space-y-1.5 flex-1 w-full">
+                      <div className="flex gap-2">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.readAsDataURL(file);
+                              reader.onload = (event) => {
+                                const img = new Image();
+                                img.src = event.target?.result as string;
+                                img.onload = () => {
+                                  const canvas = document.createElement("canvas");
+                                  // Target max dimensions for a logo
+                                  const MAX_WIDTH = 250;
+                                  const MAX_HEIGHT = 250;
+                                  let width = img.width;
+                                  let height = img.height;
+
+                                  if (width > height) {
+                                    if (width > MAX_WIDTH) {
+                                      height = Math.round((height * MAX_WIDTH) / width);
+                                      width = MAX_WIDTH;
+                                    }
+                                  } else {
+                                    if (height > MAX_HEIGHT) {
+                                      width = Math.round((width * MAX_HEIGHT) / height);
+                                      height = MAX_HEIGHT;
+                                    }
+                                  }
+
+                                  canvas.width = width;
+                                  canvas.height = height;
+                                  const ctx = canvas.getContext("2d");
+                                  if (ctx) {
+                                    ctx.drawImage(img, 0, 0, width, height);
+                                    // Compress output to JPEG at 0.75 quality
+                                    const compressedBase64 = canvas.toDataURL("image/jpeg", 0.75);
+                                    setLogoUrl(compressedBase64);
+                                    toast.success(language === "ar" ? "تم تحميل وضغط الشعار بنجاح" : "Logo loaded and compressed successfully");
+                                  } else {
+                                    setLogoUrl(event.target?.result as string);
+                                    toast.success(language === "ar" ? "تم تحميل الشعار بنجاح" : "Logo loaded successfully");
+                                  }
+                                };
+                              };
+                            }
+                          }}
+                          className="h-10 text-xs flex-1 cursor-pointer bg-background"
+                        />
+                        {logoUrl && (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            className="h-10 text-xs px-3"
+                            onClick={() => {
+                              setLogoUrl("");
+                              toast.info(language === "ar" ? "تم إزالة الشعار" : "Logo removed");
+                            }}
+                          >
+                            {language === "ar" ? "إزالة" : "Remove"}
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        {language === "ar" 
+                          ? "اختر صورة شعار المؤسسة (PNG, JPG). سيتم تخزين الصورة وتشفيرها في قاعدة البيانات السحابية مباشرة." 
+                          : "Upload company logo (PNG, JPG). The image will be encoded and stored directly in the cloud database."}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
               <Button type="submit" className="w-full h-11 bg-primary text-primary-foreground font-semibold shadow hover:bg-primary/90 mt-2">

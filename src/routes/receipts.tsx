@@ -1,11 +1,12 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Search, Eye, Trash2, Printer, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageShell } from "@/components/PageShell";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -20,9 +21,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { saleService } from "@/services/saleService";
 import { authService } from "@/services/authService";
+import { useSession } from "@/context/RoleContext";
 import { store } from "@/services/store";
 import { formatCurrency, formatDateTime } from "@/utils/format";
-import type { Sale } from "@/types";
+import type { Sale, PaymentMethod } from "@/types";
 
 export const Route = createFileRoute("/receipts")({
   beforeLoad: () => {
@@ -44,6 +46,9 @@ function ReceiptsPage() {
   const [voidConfirmSale, setVoidConfirmSale] = useState<Sale | null>(null);
   const [tick, setTick] = useState(0);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
   const sales = useMemo(() => {
     let list = saleService.list();
     
@@ -52,7 +57,7 @@ function ReceiptsPage() {
       const q = query.trim().toLowerCase();
       list = list.filter(
         (s) =>
-          s.invoiceNumber.toLowerCase().includes(q) ||
+          s.invoiceNumber.toLowerCase().replace("inv-", "").includes(q.replace("#", "")) ||
           s.customerName.toLowerCase().includes(q) ||
           s.customerPhone.includes(q)
       );
@@ -68,6 +73,17 @@ function ReceiptsPage() {
 
     return list;
   }, [query, statusFilter, tick]);
+
+  // Reset page when search or status filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, statusFilter]);
+
+  const totalPages = Math.ceil(sales.length / itemsPerPage) || 1;
+  const paginatedSales = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return sales.slice(startIndex, startIndex + itemsPerPage);
+  }, [sales, currentPage]);
 
   const handleVoidSale = (id: string) => {
     const success = saleService.voidSale(id);
@@ -130,16 +146,22 @@ function ReceiptsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sales.map((s) => {
+            {paginatedSales.map((s) => {
               const isVoided = s.status === "voided";
               return (
                 <TableRow key={s.id} className={isVoided ? "opacity-60 bg-muted/20" : ""}>
-                  <TableCell className="font-mono text-sm font-semibold">{s.invoiceNumber}</TableCell>
+                  <TableCell className="font-mono text-sm font-semibold">#{s.invoiceNumber.replace("INV-", "")}</TableCell>
                   <TableCell>{formatDateTime(s.date)}</TableCell>
                   <TableCell className="font-semibold">{s.customerName}</TableCell>
                   <TableCell>{s.customerPhone}</TableCell>
                   <TableCell>{s.cashierName}</TableCell>
-                  <TableCell>{s.paymentMethod === "Cash" ? "نقدي" : "فيزا"}</TableCell>
+                  <TableCell className="font-semibold">
+                    {s.paymentMethod === "Cash"
+                      ? "نقدي"
+                      : s.paymentMethod === "Card"
+                      ? "كارت"
+                      : `مختلط (${s.cashAmount?.toFixed(0)} نقدي + ${s.cardAmount?.toFixed(0)} كارت)`}
+                  </TableCell>
                   <TableCell className="font-bold text-primary">{formatCurrency(s.total)}</TableCell>
                   <TableCell>
                     <Badge variant={isVoided ? "destructive" : "default"}>
@@ -180,11 +202,37 @@ function ReceiptsPage() {
         </Table>
       </div>
 
+      {/* Pagination controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between bg-card p-3 rounded-lg border border-border mt-3 text-xs font-semibold">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          >
+            السابق
+          </Button>
+          <span className="text-muted-foreground">
+            صفحة {currentPage} من {totalPages} (إجمالي {sales.length} فاتورة)
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          >
+            التالي
+          </Button>
+        </div>
+      )}
+
       {/* View thermal receipt dialog */}
       <ReceiptViewDialog
         open={!!selectedSale}
         onClose={() => setSelectedSale(null)}
         sale={selectedSale}
+        onUpdated={() => setTick((t) => t + 1)}
       />
 
       {/* Confirm void dialog */}
@@ -197,7 +245,7 @@ function ReceiptsPage() {
           </DialogHeader>
           <div className="py-3 text-sm text-muted-foreground space-y-2">
             <p>
-              هل أنت متأكد من إلغاء الفاتورة رقم <b>{voidConfirmSale?.invoiceNumber}</b> التابعة للعميل <b>{voidConfirmSale?.customerName}</b>؟
+              هل أنت متأكد من إلغاء الفاتورة رقم <b>#{voidConfirmSale?.invoiceNumber.replace("INV-", "")}</b> التابعة للعميل <b>{voidConfirmSale?.customerName}</b>؟
             </p>
             <p className="bg-destructive/10 text-destructive p-3 rounded-lg border border-destructive/20 font-medium">
               سيتم إعادة كامل المنتجات المباعة في هذه الفاتورة ({voidConfirmSale?.items.length} أصناف) إلى كميات المخزن تلقائياً.
@@ -222,13 +270,30 @@ function ReceiptViewDialog({
   open,
   onClose,
   sale,
+  onUpdated,
 }: {
   open: boolean;
   onClose: () => void;
   sale: Sale | null;
+  onUpdated?: () => void;
 }) {
   if (!sale) return null;
   const settings = store.settings;
+  const { session } = useSession();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editMethod, setEditMethod] = useState<PaymentMethod>("Cash");
+  const [editCash, setEditCash] = useState<number>(0);
+  const [editCard, setEditCard] = useState<number>(0);
+
+  useEffect(() => {
+    if (sale) {
+      setEditMethod(sale.paymentMethod);
+      setEditCash(sale.cashAmount || 0);
+      setEditCard(sale.cardAmount || 0);
+      setIsEditing(false);
+    }
+  }, [sale]);
 
   return (
     <>
@@ -252,7 +317,10 @@ function ReceiptViewDialog({
                 </div>
               )}
               
-              <div className="text-center">
+              <div className="text-center mb-1">
+                {settings.logoUrl && (
+                  <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white" />
+                )}
                 <div className="text-sm font-black text-black">{settings.companyNameAr}</div>
                 <div className="text-[10px] mt-0.5 font-semibold text-black">{settings.sloganAr}</div>
                 <div className="text-[9px] mt-1 text-black font-medium">
@@ -266,7 +334,7 @@ function ReceiptViewDialog({
               
               <div className="grid grid-cols-2 gap-y-1 text-[10px] text-black">
                 <div><b>رقم الفاتورة:</b></div>
-                <div className="text-left font-bold">{sale.invoiceNumber}</div>
+                <div className="text-left font-bold">#{sale.invoiceNumber.replace("INV-", "")}</div>
                 <div><b>التاريخ والوقت:</b></div>
                 <div className="text-left">
                   {new Date(sale.date).toLocaleDateString("ar-EG")} {new Date(sale.date).toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
@@ -321,7 +389,7 @@ function ReceiptViewDialog({
                 )}
                 {sale.vat > 0 && (
                   <div className="flex justify-between">
-                    <span>الضريبة (15%)</span>
+                    <span>الضريبة (14%)</span>
                     <span>{sale.vat.toFixed(0)} ج.م</span>
                   </div>
                 )}
@@ -331,8 +399,20 @@ function ReceiptViewDialog({
                 </div>
                 <div className="flex justify-between">
                   <span>طريقة الدفع</span>
-                  <span>{sale.paymentMethod === "Cash" ? "نقدي" : "كارت"}</span>
+                  <span>
+                    {sale.paymentMethod === "Mixed"
+                      ? "مختلط"
+                      : sale.paymentMethod === "Cash"
+                      ? "نقدي"
+                      : "كارت"}
+                  </span>
                 </div>
+                {sale.paymentMethod === "Mixed" && (
+                  <div className="text-[9px] text-muted-foreground flex justify-between pr-2 border-r border-dashed border-black/40">
+                    <span>نقدي: {sale.cashAmount?.toFixed(0)} ج.م</span>
+                    <span>كارت: {sale.cardAmount?.toFixed(0)} ج.م</span>
+                  </div>
+                )}
               </div>
               
               {sale.oilUsed && sale.oilMileage && (
@@ -353,7 +433,127 @@ function ReceiptViewDialog({
               </div>
             </div>
             
-            <DialogFooter className="gap-1.5 mt-2">
+            {/* Admin/Cashier Edit Payment Method Section */}
+            {(session?.role === "admin" || session?.role === "developer" || (session?.role === "cashier" && sale.cashierId === session.id)) && !isEditing && (
+              <div className="mt-4 p-3 rounded-lg border border-dashed border-primary/30 bg-primary/5 flex items-center justify-between gap-2 text-right">
+                <div className="flex flex-col">
+                  <span className="font-bold text-xs text-primary">تعديل طريقة الدفع</span>
+                  <span className="text-[10px] text-muted-foreground mt-0.5">يمكنك تعديل طريقة الدفع لتسوية هذه الفاتورة</span>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>تعديل طريقة الدفع</Button>
+              </div>
+            )}
+
+            {isEditing && (
+              <div className="mt-4 p-3 rounded-lg border border-primary/40 bg-accent/20 space-y-3 text-right">
+                <span className="font-bold text-xs text-primary block">تعديل طريقة دفع الفاتورة</span>
+                
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold text-muted-foreground">اختر الطريقة الجديدة</Label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <Button
+                      type="button"
+                      variant={editMethod === "Cash" ? "default" : "outline"}
+                      className="h-8 text-xs font-bold px-1"
+                      onClick={() => {
+                        setEditMethod("Cash");
+                        setEditCash(sale.total);
+                        setEditCard(0);
+                      }}
+                    >
+                      نقدي
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={editMethod === "Card" ? "default" : "outline"}
+                      className="h-8 text-xs font-bold px-1"
+                      onClick={() => {
+                        setEditMethod("Card");
+                        setEditCash(0);
+                        setEditCard(sale.total);
+                      }}
+                    >
+                      كارت
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={editMethod === "Mixed" ? "default" : "outline"}
+                      className="h-8 text-xs font-bold px-1"
+                      onClick={() => {
+                        setEditMethod("Mixed");
+                        setEditCash(Math.round(sale.total / 2));
+                        setEditCard(sale.total - Math.round(sale.total / 2));
+                      }}
+                    >
+                      مختلط
+                    </Button>
+                  </div>
+                </div>
+
+                {editMethod === "Mixed" && (
+                  <div className="grid grid-cols-2 gap-2 animate-in fade-in duration-200">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-semibold text-green-700">المبلغ النقدي</Label>
+                      <Input
+                        type="number"
+                        value={editCash === 0 ? "" : editCash}
+                        onChange={(e) => {
+                          const val = Math.min(Number(e.target.value) || 0, sale.total);
+                          setEditCash(val);
+                          setEditCard(+(sale.total - val).toFixed(2));
+                        }}
+                        className="h-8 text-xs text-center font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-semibold text-primary">المبلغ بالكارت</Label>
+                      <Input
+                        type="number"
+                        value={editCard === 0 ? "" : editCard}
+                        onChange={(e) => {
+                          const val = Math.min(Number(e.target.value) || 0, sale.total);
+                          setEditCard(val);
+                          setEditCash(+(sale.total - val).toFixed(2));
+                        }}
+                        className="h-8 text-xs text-center font-bold"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2 justify-end pt-1">
+                  <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setIsEditing(false)}>إلغاء</Button>
+                  <Button
+                    size="sm"
+                    className="h-8 text-xs bg-primary text-primary-foreground font-bold"
+                    onClick={() => {
+                      if (editMethod === "Mixed" && Math.abs(editCash + editCard - sale.total) > 0.01) {
+                        toast.error("مجموع المبالغ يجب أن يساوي إجمالي الفاتورة");
+                        return;
+                      }
+                      const success = saleService.updatePaymentMethod(
+                        sale.id,
+                        editMethod,
+                        editMethod === "Mixed" ? editCash : undefined,
+                        editMethod === "Mixed" ? editCard : undefined
+                      );
+                      if (success) {
+                        toast.success("تم تحديث طريقة الدفع بنجاح.");
+                        setIsEditing(false);
+                        if (onUpdated) onUpdated();
+                        onClose();
+                      } else {
+                        toast.error("فشل التحديث. الفاتورة قد تكون ملغاة.");
+                      }
+                    }}
+                  >
+                    حفظ التغييرات
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="gap-1.5 mt-3">
               <Button variant="ghost" size="sm" onClick={onClose}>إغلاق</Button>
               <Button size="sm" onClick={() => window.print()}>
                 <Printer className="mr-1.5 h-3.5 w-3.5" /> طباعة
@@ -440,7 +640,10 @@ function ReceiptViewDialog({
           )}
           
           {/* Header */}
-          <div className="text-center">
+          <div className="text-center mb-1">
+            {settings.logoUrl && (
+              <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white" />
+            )}
             <div className="text-sm font-black text-black">{settings.companyNameAr}</div>
             <div className="text-[10px] mt-0.5 font-semibold text-black">{settings.sloganAr}</div>
             <div className="text-[9px] mt-1 text-black font-medium">
@@ -455,7 +658,7 @@ function ReceiptViewDialog({
           {/* Metadata */}
           <div className="grid grid-cols-2 gap-y-1 text-[10px] text-black">
             <div><b>رقم الفاتورة:</b></div>
-            <div className="text-left font-bold">{sale.invoiceNumber}</div>
+            <div className="text-left font-bold">#{sale.invoiceNumber.replace("INV-", "")}</div>
             <div><b>التاريخ والوقت:</b></div>
             <div className="text-left">
               {new Date(sale.date).toLocaleDateString("ar-EG")} {new Date(sale.date).toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
@@ -513,7 +716,7 @@ function ReceiptViewDialog({
             )}
             {sale.vat > 0 && (
               <div className="flex justify-between">
-                <span>الضريبة (15%)</span>
+                <span>الضريبة (14%)</span>
                 <span>{sale.vat.toFixed(0)} ج.م</span>
               </div>
             )}
@@ -523,8 +726,20 @@ function ReceiptViewDialog({
             </div>
             <div className="flex justify-between">
               <span>طريقة الدفع</span>
-              <span>{sale.paymentMethod === "Cash" ? "نقدي" : "كارت"}</span>
+              <span>
+                {sale.paymentMethod === "Mixed"
+                  ? "مختلط"
+                  : sale.paymentMethod === "Cash"
+                  ? "نقدي"
+                  : "كارت"}
+              </span>
             </div>
+            {sale.paymentMethod === "Mixed" && (
+              <div className="text-[9px] text-muted-foreground flex justify-between pr-2 border-r border-dashed border-black/40">
+                <span>نقدي: {sale.cashAmount?.toFixed(0)} ج.م</span>
+                <span>كارت: {sale.cardAmount?.toFixed(0)} ج.م</span>
+              </div>
+            )}
           </div>
           
           {/* Next Change calculation conditional display */}

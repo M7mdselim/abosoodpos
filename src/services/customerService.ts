@@ -1,5 +1,6 @@
 import { store } from "./store";
 import type { Customer, CustomerCar } from "@/types";
+import { backendService } from "./backendService";
 
 function ensureCustomerCars(c: Customer): Customer {
   if (!c.cars || c.cars.length === 0) {
@@ -51,9 +52,11 @@ export const customerService = {
       ];
     }
     store.customers = [customer, ...store.customers];
+    backendService.createCustomer(customer).catch((err) => console.error("Error creating customer in backend:", err));
     return customer;
   },
   update: (id: string, patch: Partial<Customer>) => {
+    let updatedCustomer: Customer | null = null;
     store.customers = store.customers.map((c) => {
       if (c.id === id) {
         const updated = { ...c, ...patch };
@@ -67,10 +70,14 @@ export const customerService = {
           updated.lastOilUsed = mainCar.lastOilUsed;
           updated.lastOilMileage = mainCar.lastOilMileage;
         }
+        updatedCustomer = updated;
         return updated;
       }
       return c;
     });
+    if (updatedCustomer) {
+      backendService.updateCustomer(id, updatedCustomer).catch((err) => console.error("Error updating customer in backend:", err));
+    }
   },
   addCar: (customerId: string, car: Omit<CustomerCar, "id">): CustomerCar => {
     const newCar: CustomerCar = { ...car, id: `car_${Date.now()}` };

@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Trash2, Edit, Shield, User as UserIcon, ShieldAlert, Key, UserCheck, ToggleLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageShell } from "@/components/PageShell";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { userService } from "@/services/userService";
-import type { User, UserRole } from "@/types";
+import type { User, UserRole, UserPermissions } from "@/types";
 import { useSession } from "@/context/RoleContext";
 import { authService } from "@/services/authService";
 
@@ -39,141 +40,417 @@ export const Route = createFileRoute("/users")({
 function UsersPage() {
   const { session } = useSession();
   const [tick, setTick] = useState(0);
-  const [creating, setCreating] = useState(false);
-  const list = userService.list();
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const list = useMemo(() => {
+    return userService.list();
+  }, [tick]);
+
+  const filteredList = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return list;
+    return list.filter(
+      (u) =>
+        u.name.toLowerCase().includes(q) ||
+        u.username.toLowerCase().includes(q) ||
+        u.role.toLowerCase().includes(q)
+    );
+  }, [list, searchQuery]);
 
   const isAdminOrDev = session?.role === "admin" || session?.role === "developer";
 
   if (!isAdminOrDev) {
     return (
-      <PageShell title="Users">
-        <div className="text-center text-muted-foreground py-16">
-          Admins only.
+      <PageShell title="المستخدمين">
+        <div className="text-center text-muted-foreground py-16 font-bold">
+          غير مصرح بالدخول لغير المدراء.
         </div>
       </PageShell>
     );
   }
 
+  const handleOpenCreate = () => {
+    setEditingUser(null);
+    setIsDialogOpen(true);
+  };
+
+  const handleOpenEdit = (user: User) => {
+    setEditingUser(user);
+    setIsDialogOpen(true);
+  };
+
+  const handleDeleteUser = (id: string, name: string) => {
+    if (confirm(`هل أنت متأكد من حذف المستخدم ${name} نهائياً؟`)) {
+      userService.remove(id);
+      toast.success(`تم حذف المستخدم ${name} بنجاح`);
+      setTick((t) => t + 1);
+    }
+  };
+
   return (
     <PageShell
-      title="Users"
-      subtitle={`${list.length} users`}
+      title="إدارة المستخدمين والصلاحيات"
+      subtitle={`يوجد حالياً ${list.length} مستخدم نشط ومسجل بالدرج`}
       actions={
-        <Button size="lg" onClick={() => setCreating(true)}>
-          <Plus className="mr-2 h-5 w-5" /> New User
+        <Button size="lg" onClick={handleOpenCreate} className="gap-1.5 font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30">
+          <Plus className="h-5 w-5" /> إضافة مستخدم جديد
         </Button>
       }
     >
-      <div className="rounded-xl border border-border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {list.map((u) => (
-              <TableRow key={u.id}>
-                <TableCell className="font-semibold">{u.name}</TableCell>
-                <TableCell>
-                  <Badge variant={u.role === "admin" ? "default" : "secondary"}>
-                    {u.role.toUpperCase()}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={u.status === "active"}
-                      onCheckedChange={(v) => {
-                        userService.update(u.id, { status: v ? "active" : "inactive" });
-                        setTick((t) => t + 1);
-                      }}
-                    />
-                    <span className="text-xs">{u.status}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => {
-                      userService.remove(u.id);
-                      toast.success("User removed");
-                      setTick((t) => t + 1);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </TableCell>
+      <div className="flex flex-col gap-4">
+        {/* Search filter bar */}
+        <div className="flex items-center bg-card p-4 rounded-xl border border-border">
+          <div className="relative w-full max-w-md">
+            <Input
+              placeholder="ابحث باسم الموظف أو اسم المستخدم..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pr-4 pl-10 h-11 text-sm font-semibold"
+            />
+          </div>
+        </div>
+
+        {/* Users Table */}
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <Table>
+            <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
+              <TableRow>
+                <TableHead className="text-right font-black text-slate-800">اسم الموظف</TableHead>
+                <TableHead className="text-right font-black text-slate-800">اسم المستخدم</TableHead>
+                <TableHead className="text-right font-black text-slate-800">دور المستخدم</TableHead>
+                <TableHead className="text-right font-black text-slate-800">حالة الحساب</TableHead>
+                <TableHead className="text-right font-black text-slate-800">صلاحيات البيع</TableHead>
+                <TableHead className="text-left font-black text-slate-800 pl-6">الإجراءات</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredList.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground font-semibold">
+                    لا يوجد مستخدمين مسجلين يطابقون البحث
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredList.map((u) => (
+                  <TableRow key={u.id} className="hover:bg-muted/10 transition-colors">
+                    <TableCell className="font-bold text-slate-800 dark:text-slate-100">{u.name}</TableCell>
+                    <TableCell className="font-mono text-sm font-semibold text-slate-600 dark:text-slate-400">{u.username}</TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant="outline"
+                        className={
+                          u.role === "admin" 
+                            ? "border-blue-500 bg-blue-50/50 text-blue-700 font-bold dark:bg-blue-950/20" 
+                            : "border-emerald-500 bg-emerald-50/50 text-emerald-700 font-bold dark:bg-emerald-950/20"
+                        }
+                      >
+                        {u.role === "admin" ? "مدير نظام (Admin)" : "كاشير (Cashier)"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={u.status === "active"}
+                          onCheckedChange={(checked) => {
+                            userService.update(u.id, { status: checked ? "active" : "inactive" });
+                            toast.success(`تم ${checked ? "تفعيل" : "إلغاء تفعيل"} حساب المستخدم ${u.name}`);
+                            setTick((t) => t + 1);
+                          }}
+                        />
+                        <span className={`text-xs font-bold ${u.status === "active" ? "text-emerald-600" : "text-muted-foreground"}`}>
+                          {u.status === "active" ? "نشط" : "معطل"}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {u.role === "admin" ? (
+                        <span className="text-blue-600 font-bold">صلاحيات كاملة</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {u.permissions?.canDiscount && <Badge variant="secondary" className="text-[10px]">الخصم</Badge>}
+                          {u.permissions?.canOpenShift && <Badge variant="secondary" className="text-[10px]">فتح وردية</Badge>}
+                          {u.permissions?.canCloseShift && <Badge variant="secondary" className="text-[10px]">إغلاق وردية</Badge>}
+                          {u.permissions?.canPrintSpotCheck && <Badge variant="secondary" className="text-[10px]">جرد الوردية</Badge>}
+                          {!u.permissions?.canDiscount && 
+                           !u.permissions?.canOpenShift && 
+                           !u.permissions?.canCloseShift && 
+                           !u.permissions?.canPrintSpotCheck && (
+                             <span className="text-red-500 font-semibold">ممنوع من كل الصلاحيات</span>
+                           )}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-left pl-4">
+                      <div className="flex items-center justify-start gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleOpenEdit(u)}
+                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDeleteUser(u.id, u.name)}
+                          className="h-8 w-8 text-destructive hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
-      <NewUserDialog
-        open={creating}
-        onOpenChange={setCreating}
-        onCreated={() => setTick((t) => t + 1)}
+      <UserFormDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        user={editingUser}
+        onSaved={() => setTick((t) => t + 1)}
       />
     </PageShell>
   );
 }
 
-function NewUserDialog({
+function UserFormDialog({
   open,
   onOpenChange,
-  onCreated,
+  user,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  onCreated: () => void;
+  user: User | null;
+  onSaved: () => void;
 }) {
+  const isEdit = !!user;
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("cashier");
+  const [status, setStatus] = useState<"active" | "inactive">("active");
 
-  function save() {
-    if (!name) {
-      toast.error("Enter a name");
+  // Permissions state
+  const [canDiscount, setCanDiscount] = useState(true);
+  const [canOpenShift, setCanOpenShift] = useState(true);
+  const [canCloseShift, setCanCloseShift] = useState(true);
+  const [canPrintSpotCheck, setCanPrintSpotCheck] = useState(true);
+
+  // Sync state when dialog opens or user changes
+  useMemo(() => {
+    if (open) {
+      if (user) {
+        setName(user.name);
+        setUsername(user.username);
+        setPassword(user.password || "");
+        setRole(user.role);
+        setStatus(user.status);
+        setCanDiscount(user.permissions?.canDiscount ?? true);
+        setCanOpenShift(user.permissions?.canOpenShift ?? true);
+        setCanCloseShift(user.permissions?.canCloseShift ?? true);
+        setCanPrintSpotCheck(user.permissions?.canPrintSpotCheck ?? true);
+      } else {
+        setName("");
+        setUsername("");
+        setPassword("");
+        setRole("cashier");
+        setStatus("active");
+        setCanDiscount(true);
+        setCanOpenShift(true);
+        setCanCloseShift(true);
+        setCanPrintSpotCheck(true);
+      }
+    }
+  }, [open, user]);
+
+  function handleSave() {
+    if (!name.trim()) {
+      toast.error("يرجى إدخال اسم الموظف");
       return;
     }
-    userService.create({ name, role: role as any, status: "active" });
-    toast.success("User created");
-    onCreated();
+    if (!username.trim()) {
+      toast.error("يرجى إدخال اسم المستخدم");
+      return;
+    }
+    if (!isEdit && !password.trim()) {
+      toast.error("يرجى تعيين كلمة مرور للمستخدم الجديد");
+      return;
+    }
+
+    const permissions: UserPermissions = {
+      canDiscount,
+      canOpenShift,
+      canCloseShift,
+      canPrintSpotCheck,
+    };
+
+    if (isEdit && user) {
+      userService.update(user.id, {
+        name,
+        username,
+        password: password || user.password,
+        role,
+        status,
+        permissions: role === "cashier" ? permissions : undefined,
+      });
+      toast.success("تم تحديث بيانات المستخدم بنجاح");
+    } else {
+      // Check duplicate usernames
+      const users = userService.list();
+      const exists = users.some(u => u.username.toLowerCase() === username.toLowerCase().trim());
+      if (exists) {
+        toast.error("اسم المستخدم مسجل مسبقاً لموظف آخر، يرجى اختيار اسم مستخدم مختلف");
+        return;
+      }
+
+      userService.create({
+        name,
+        username,
+        password,
+        role,
+        status,
+        permissions: role === "cashier" ? permissions : undefined,
+      });
+      toast.success("تم تسجيل المستخدم الجديد بالنجاح في قاعدة البيانات");
+    }
+
+    onSaved();
     onOpenChange(false);
-    setName("");
-    setRole("cashier");
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg text-right">
         <DialogHeader>
-          <DialogTitle>New User</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-right">
+            {isEdit ? <Edit className="h-5 w-5 text-blue-600" /> : <Plus className="h-5 w-5 text-primary" />}
+            <span>{isEdit ? "تعديل بيانات الحساب" : "إضافة مستخدم جديد للنظام"}</span>
+          </DialogTitle>
         </DialogHeader>
-        <div className="grid gap-3 py-2">
-          <div>
-            <Label>Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
+
+        <div className="grid gap-4 py-3 text-right">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="font-bold">اسم الموظف كاملاً</Label>
+              <Input 
+                value={name} 
+                onChange={(e) => setName(e.target.value)} 
+                placeholder="أحمد علي..." 
+                className="h-11"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="font-bold">اسم المستخدم (للإدخال)</Label>
+              <Input 
+                value={username} 
+                onChange={(e) => setUsername(e.target.value)} 
+                placeholder="ahmed123" 
+                className="h-11 font-mono text-left"
+              />
+            </div>
           </div>
-          <div>
-            <Label>Role</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="cashier">Cashier</SelectItem>
-                <SelectItem value="developer">Developer</SelectItem>
-              </SelectContent>
-            </Select>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="font-bold">كلمة المرور</Label>
+              <Input 
+                type="text"
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                placeholder={isEdit ? "اتركها فارغة لعدم التغيير" : "اكتب كلمة المرور..."}
+                className="h-11 font-mono"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="font-bold">دور الحساب</Label>
+              <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
+                <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">مدير نظام (Admin)</SelectItem>
+                  <SelectItem value="cashier">كاشير / موظف (Cashier)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
+          <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-border dark:bg-slate-900/30">
+            <span className="font-bold text-sm text-slate-800 dark:text-slate-200">تفعيل حساب المستخدم فوراً؟</span>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={status === "active"}
+                onCheckedChange={(checked) => setStatus(checked ? "active" : "inactive")}
+              />
+              <span className="text-xs font-bold">{status === "active" ? "حساب نشط" : "حساب معطل"}</span>
+            </div>
+          </div>
+
+          {/* Cashier Permissions checklist */}
+          {role === "cashier" && (
+            <div className="border border-amber-500/20 bg-amber-500/5 p-4 rounded-xl space-y-3 animate-in fade-in duration-200">
+              <h4 className="font-black text-sm text-amber-800 flex items-center gap-1.5 border-b border-amber-500/20 pb-1.5">
+                <ShieldAlert className="h-4 w-4" /> صلاحيات الكاشير في نقطة البيع
+              </h4>
+              
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox 
+                    id="perm_discount" 
+                    checked={canDiscount} 
+                    onCheckedChange={(checked) => setCanDiscount(!!checked)}
+                  />
+                  <label htmlFor="perm_discount" className="font-semibold cursor-pointer select-none">
+                    السماح بعمل خصومات على الفواتير
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox 
+                    id="perm_spot" 
+                    checked={canPrintSpotCheck} 
+                    onCheckedChange={(checked) => setCanPrintSpotCheck(!!checked)}
+                  />
+                  <label htmlFor="perm_spot" className="font-semibold cursor-pointer select-none">
+                    السماح بطباعة تقرير جرد الوردية (Spot Check)
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox 
+                    id="perm_open" 
+                    checked={canOpenShift} 
+                    onCheckedChange={(checked) => setCanOpenShift(!!checked)}
+                  />
+                  <label htmlFor="perm_open" className="font-semibold cursor-pointer select-none">
+                    السماح بفتح وبدء وردية جديدة
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox 
+                    id="perm_close" 
+                    checked={canCloseShift} 
+                    onCheckedChange={(checked) => setCanCloseShift(!!checked)}
+                  />
+                  <label htmlFor="perm_close" className="font-semibold cursor-pointer select-none">
+                    السماح بإغلاق وإنهاء الوردية
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={save}>Save</Button>
+
+        <DialogFooter className="gap-2 justify-end">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>إلغاء</Button>
+          <Button onClick={handleSave} className="font-bold px-6">حفظ الحساب</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -1,4 +1,7 @@
 import { store } from "./store";
+import { authService } from "./authService";
+import { userLogService } from "./userLogService";
+import { backendService } from "./backendService";
 
 export interface Shift {
   id: string;
@@ -106,6 +109,20 @@ export const shiftService = {
 
     shifts.unshift(newShift);
     this.saveShifts(shifts);
+    backendService.openShift(newShift).catch((err) => console.error("Error opening shift in backend:", err));
+
+    // Log Action
+    const session = authService.getSession();
+    if (session) {
+      userLogService.log(
+        session.id,
+        session.name,
+        session.role,
+        "فتح الوردية",
+        `تم فتح وردية جديدة باسم ${session.name} بمبلغ افتتاح ${openingCash} ج.م (يوم الوردية: ${newShift.shiftDay}).`
+      );
+    }
+
     return newShift;
   },
 
@@ -121,6 +138,21 @@ export const shiftService = {
     active.notes = notes;
 
     this.saveShifts(shifts);
+    backendService.closeShift(actualCash, notes || "", active.endTime)
+      .catch((err) => console.error("Error closing shift in backend:", err));
+
+    // Log Action
+    const session = authService.getSession();
+    if (session) {
+      userLogService.log(
+        session.id,
+        session.name,
+        session.role,
+        "إغلاق الوردية",
+        `تم إغلاق الوردية النشطة باسم ${active.cashierName} بمبلغ جرد فعلي ${actualCash} ج.م (المتوقع: ${active.expectedCash} ج.م، الفارق: ${actualCash - active.expectedCash} ج.م).`
+      );
+    }
+
     return active;
   },
 

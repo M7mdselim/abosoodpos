@@ -16,6 +16,7 @@ import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ReceiptsRouteImport } from './routes/receipts'
 import { Route as ProductsRouteImport } from './routes/products'
 import { Route as PosRouteImport } from './routes/pos'
+import { Route as LogsRouteImport } from './routes/logs'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DeveloperRouteImport } from './routes/developer'
 import { Route as CustomersRouteImport } from './routes/customers'
@@ -56,6 +57,11 @@ const PosRoute = PosRouteImport.update({
   path: '/pos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LogsRoute = LogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/customers': typeof CustomersRoute
   '/developer': typeof DeveloperRoute
   '/login': typeof LoginRoute
+  '/logs': typeof LogsRoute
   '/pos': typeof PosRoute
   '/products': typeof ProductsRoute
   '/receipts': typeof ReceiptsRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/customers': typeof CustomersRoute
   '/developer': typeof DeveloperRoute
   '/login': typeof LoginRoute
+  '/logs': typeof LogsRoute
   '/pos': typeof PosRoute
   '/products': typeof ProductsRoute
   '/receipts': typeof ReceiptsRoute
@@ -109,6 +117,7 @@ export interface FileRoutesById {
   '/customers': typeof CustomersRoute
   '/developer': typeof DeveloperRoute
   '/login': typeof LoginRoute
+  '/logs': typeof LogsRoute
   '/pos': typeof PosRoute
   '/products': typeof ProductsRoute
   '/receipts': typeof ReceiptsRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/developer'
     | '/login'
+    | '/logs'
     | '/pos'
     | '/products'
     | '/receipts'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/developer'
     | '/login'
+    | '/logs'
     | '/pos'
     | '/products'
     | '/receipts'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/developer'
     | '/login'
+    | '/logs'
     | '/pos'
     | '/products'
     | '/receipts'
@@ -164,6 +176,7 @@ export interface RootRouteChildren {
   CustomersRoute: typeof CustomersRoute
   DeveloperRoute: typeof DeveloperRoute
   LoginRoute: typeof LoginRoute
+  LogsRoute: typeof LogsRoute
   PosRoute: typeof PosRoute
   ProductsRoute: typeof ProductsRoute
   ReceiptsRoute: typeof ReceiptsRoute
@@ -224,6 +237,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/logs': {
+      id: '/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof LogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -260,6 +280,7 @@ const rootRouteChildren: RootRouteChildren = {
   CustomersRoute: CustomersRoute,
   DeveloperRoute: DeveloperRoute,
   LoginRoute: LoginRoute,
+  LogsRoute: LogsRoute,
   PosRoute: PosRoute,
   ProductsRoute: ProductsRoute,
   ReceiptsRoute: ReceiptsRoute,

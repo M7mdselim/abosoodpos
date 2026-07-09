@@ -51,7 +51,7 @@ export const mockSales: Sale[] = Array.from({ length: 300 }, (_, i) => {
   const oil = items.find((it) => oilProducts.some((p) => p.id === it.productId));
   return {
     id: `s${i + 1}`,
-    invoiceNumber: `INV-${String(100000 + i).padStart(6, "0")}`,
+    invoiceNumber: `${100000 + i}`,
     date: date.toISOString(),
     customerId: customer.id,
     customerName: customer.name,

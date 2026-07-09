@@ -5,6 +5,7 @@ import { useSession } from "@/context/RoleContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { authService } from "@/services/authService";
 import { store } from "@/services/store";
+import { backendService } from "@/services/backendService";
 import { PageShell } from "@/components/PageShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,10 @@ export const Route = createFileRoute("/settings")({
   beforeLoad: () => {
     if (!authService.isAuthenticated()) {
       throw redirect({ to: "/login" });
+    }
+    const session = authService.getSession();
+    if (session?.role !== "developer") {
+      throw redirect({ to: "/pos" });
     }
   },
   component: SettingsPage,
@@ -34,12 +39,14 @@ function SettingsPage() {
   const [receiptFontSize, setReceiptFontSize] = useState(settings.receiptFontSize || 11);
 
   const handleSaveSettings = () => {
-    store.settings = {
+    const updated = {
       ...settings,
       receiptWidth,
       receiptMargin,
       receiptFontSize,
     };
+    store.settings = updated;
+    backendService.saveSettings(updated).catch((err) => console.error("Error saving settings in backend:", err));
     toast.success(
       language === "ar" ? "تم حفظ إعدادات الطابعة بنجاح وتحديث النظام" : "Receipt printer settings saved successfully!"
     );
@@ -68,7 +75,7 @@ function SettingsPage() {
 
   // Mock sale data for the receipt preview
   const mockPreviewSale = {
-    invoiceNumber: "INV-2026-9999",
+    invoiceNumber: "20269999",
     date: new Date(),
     cashierName: session?.username || "الكاشير",
     customerName: "محمد سليم (تجريبي)",
@@ -82,8 +89,8 @@ function SettingsPage() {
     ],
     subtotal: 195,
     discount: 0,
-    vat: 29.25,
-    total: 224.25,
+    vat: 27.3,
+    total: 222.3,
     paymentMethod: "Cash",
     oilUsed: "Toyota 5W-30",
     oilMileage: 10000,
@@ -329,7 +336,10 @@ function SettingsPage() {
               }}
             >
               {/* Header */}
-              <div className="text-center">
+              <div className="text-center mb-1">
+                {settings.logoUrl && (
+                  <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white animate-in fade-in" />
+                )}
                 <div 
                   className="font-black text-black leading-tight"
                   style={{ fontSize: `${receiptFontSize * 1.3}px` }}
@@ -360,7 +370,7 @@ function SettingsPage() {
                 style={{ fontSize: `${receiptFontSize * 0.9}px` }}
               >
                 <div><b>رقم الفاتورة:</b></div>
-                <div className="text-left font-bold">{mockPreviewSale.invoiceNumber}</div>
+                <div className="text-left font-bold">#{mockPreviewSale.invoiceNumber.replace("INV-", "")}</div>
                 <div><b>التاريخ والوقت:</b></div>
                 <div className="text-left">
                   {mockPreviewSale.date.toLocaleDateString("ar-EG")} {mockPreviewSale.date.toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
@@ -427,8 +437,8 @@ function SettingsPage() {
                 )}
                 {mockPreviewSale.vat > 0 && (
                   <div className="flex justify-between">
-                    <span>الضريبة (15%)</span>
-                    <span>{mockPreviewSale.vat.toFixed(0)} ج.م</span>
+                    <span>الضريبة (14%)</span>
+                    <span>{mockPreviewSale.vat.toFixed(1)} ج.م</span>
                   </div>
                 )}
                 <div 
@@ -480,7 +490,10 @@ function SettingsPage() {
           dir="rtl"
         >
           {/* Header */}
-          <div className="text-center">
+          <div className="text-center mb-1">
+            {settings.logoUrl && (
+              <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white" />
+            )}
             <div className="text-sm font-black text-black leading-tight">
               {settings.companyNameAr}
             </div>
@@ -499,7 +512,7 @@ function SettingsPage() {
           {/* Metadata */}
           <div className="grid grid-cols-2 gap-y-1 text-black">
             <div><b>رقم الفاتورة:</b></div>
-            <div className="text-left font-bold">{mockPreviewSale.invoiceNumber}</div>
+            <div className="text-left font-bold">#{mockPreviewSale.invoiceNumber.replace("INV-", "")}</div>
             <div><b>التاريخ والوقت:</b></div>
             <div className="text-left">
               {mockPreviewSale.date.toLocaleDateString("ar-EG")} {mockPreviewSale.date.toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
@@ -557,8 +570,8 @@ function SettingsPage() {
             )}
             {mockPreviewSale.vat > 0 && (
               <div className="flex justify-between">
-                <span>الضريبة (15%)</span>
-                <span>{mockPreviewSale.vat.toFixed(0)} ج.م</span>
+                <span>الضريبة (14%)</span>
+                <span>{mockPreviewSale.vat.toFixed(1)} ج.م</span>
               </div>
             )}
             <div className="flex justify-between border-y-2 border-black py-1 font-extrabold my-1 text-black">

@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Search, Star } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Star, Package, AlertCircle, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageShell } from "@/components/PageShell";
@@ -64,8 +64,28 @@ function ProductsPage() {
   const [tick, setTick] = useState(0);
   const [editing, setEditing] = useState<Product | null>(null);
   const [creating, setCreating] = useState(false);
+  const [filterType, setFilterType] = useState<"all" | "low_stock" | "out_of_stock">("all");
 
-  const list = useMemo(() => productService.search(query), [query, tick]);
+  const allProducts = useMemo(() => productService.list(), [tick]);
+  
+  const outOfStockCount = useMemo(() => {
+    return allProducts.filter((p) => !p.isUnlimited && p.stock <= 0).length;
+  }, [allProducts]);
+
+  const lowStockCount = useMemo(() => {
+    return allProducts.filter((p) => !p.isUnlimited && p.stock > 0 && p.stock <= 5).length;
+  }, [allProducts]);
+
+  const list = useMemo(() => {
+    let searched = productService.search(query);
+    if (filterType === "out_of_stock") {
+      searched = searched.filter((p) => !p.isUnlimited && p.stock <= 0);
+    } else if (filterType === "low_stock") {
+      searched = searched.filter((p) => !p.isUnlimited && p.stock > 0 && p.stock <= 5);
+    }
+    return searched;
+  }, [query, filterType, tick]);
+
   const refresh = () => setTick((t) => t + 1);
 
   return (
@@ -78,6 +98,81 @@ function ProductsPage() {
         </Button>
       }
     >
+      {/* Analytics Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        {/* Total Products Card */}
+        <button
+          onClick={() => setFilterType("all")}
+          className={`flex items-center justify-between p-4 rounded-xl border transition-all text-right ${
+            filterType === "all"
+              ? "bg-primary/10 border-primary shadow-sm scale-[1.02]"
+              : "bg-card border-border hover:border-muted-foreground/30 hover:shadow-xs"
+          }`}
+        >
+          <div className="space-y-1">
+            <span className="text-xs font-bold text-muted-foreground block">إجمالي المنتجات</span>
+            <span className="text-2xl font-black text-foreground">{allProducts.length}</span>
+          </div>
+          <div className={`p-3 rounded-lg ${filterType === "all" ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
+            <Package className="h-5 w-5" />
+          </div>
+        </button>
+
+        {/* Low Stock Card */}
+        <button
+          onClick={() => setFilterType("low_stock")}
+          className={`flex items-center justify-between p-4 rounded-xl border transition-all text-right ${
+            filterType === "low_stock"
+              ? "bg-amber-500/10 border-amber-500 shadow-sm scale-[1.02]"
+              : "bg-card border-border hover:border-amber-500/30 hover:shadow-xs"
+          }`}
+        >
+          <div className="space-y-1">
+            <span className="text-xs font-bold text-amber-600 dark:text-amber-400 block">منتجات منخفضة المخزون</span>
+            <span className="text-2xl font-black text-amber-600 dark:text-amber-400">{lowStockCount}</span>
+          </div>
+          <div className={`p-3 rounded-lg ${filterType === "low_stock" ? "bg-amber-500/20 text-amber-500" : "bg-amber-500/10 text-amber-500/80"}`}>
+            <AlertTriangle className="h-5 w-5" />
+          </div>
+        </button>
+
+        {/* Out of Stock Card */}
+        <button
+          onClick={() => setFilterType("out_of_stock")}
+          className={`flex items-center justify-between p-4 rounded-xl border transition-all text-right ${
+            filterType === "out_of_stock"
+              ? "bg-destructive/10 border-destructive shadow-sm scale-[1.02]"
+              : "bg-card border-border hover:border-destructive/30 hover:shadow-xs"
+          }`}
+        >
+          <div className="space-y-1">
+            <span className="text-xs font-bold text-destructive block">منتجات نفذت الكمية</span>
+            <span className="text-2xl font-black text-destructive">{outOfStockCount}</span>
+          </div>
+          <div className={`p-3 rounded-lg ${filterType === "out_of_stock" ? "bg-destructive/20 text-destructive" : "bg-destructive/10 text-destructive/80"}`}>
+            <AlertCircle className="h-5 w-5" />
+          </div>
+        </button>
+      </div>
+
+      {filterType !== "all" && (
+        <div className="mb-4 flex items-center justify-between bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg text-xs font-bold text-amber-700 dark:text-amber-400">
+          <span>
+            {filterType === "low_stock" 
+              ? "يتم الآن عرض المنتجات ذات المخزون المنخفض فقط (5 قطع أو أقل)." 
+              : "يتم الآن عرض المنتجات التي نفذت كميتها فقط."}
+          </span>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setFilterType("all")}
+            className="h-7 px-2 font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
+          >
+            إلغاء التصفية
+          </Button>
+        </div>
+      )}
+
       <div className="mb-4 relative max-w-md">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -92,6 +187,7 @@ function ProductsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>المنتج</TableHead>
+              <TableHead>الحالة</TableHead>
               <TableHead>الفئة</TableHead>
               <TableHead>الماركة</TableHead>
               <TableHead>الباركود</TableHead>
@@ -103,7 +199,7 @@ function ProductsPage() {
           </TableHeader>
           <TableBody>
             {list.map((p) => (
-              <TableRow key={p.id}>
+              <TableRow key={p.id} className={p.isActive === false ? "opacity-60 bg-muted/20" : ""}>
                 <TableCell className="font-semibold">
                   <div className="flex items-center gap-1.5">
                     <span>{p.name}</span>
@@ -113,6 +209,15 @@ function ProductsPage() {
                       </span>
                     )}
                   </div>
+                </TableCell>
+                <TableCell>
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                    p.isActive !== false
+                      ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                      : "bg-muted text-muted-foreground border border-muted"
+                  }`}>
+                    {p.isActive !== false ? "نشط" : "غير نشط"}
+                  </span>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1.5">
@@ -144,7 +249,17 @@ function ProductsPage() {
                 <TableCell className="text-right font-semibold text-primary">
                   {formatCurrency(p.sellingPrice)}
                 </TableCell>
-                <TableCell className="text-right">{p.stock}</TableCell>
+                <TableCell className="text-right">
+                  {p.isUnlimited ? (
+                    <span className="text-muted-foreground font-semibold">غير محدود</span>
+                  ) : (
+                    <span className={`font-bold ${
+                      p.stock === 0 ? "text-destructive" : p.stock <= 5 ? "text-amber-600 dark:text-amber-400" : ""
+                    }`}>
+                      {p.stock}
+                    </span>
+                  )}
+                </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
                     <Button size="icon" variant="ghost" onClick={() => setEditing(p)}>
@@ -207,6 +322,8 @@ function ProductDialog({
     stock: 0,
     oilMileage: undefined,
     isPopular: false,
+    isUnlimited: false,
+    isActive: true,
   });
 
   useEffect(() => {
@@ -216,6 +333,8 @@ function ProductDialog({
         ...rest,
         oilMileage: rest.oilMileage || undefined,
         isPopular: rest.isPopular || false,
+        isUnlimited: rest.isUnlimited || false,
+        isActive: rest.isActive !== false,
       });
     } else {
       setForm({
@@ -228,6 +347,8 @@ function ProductDialog({
         stock: 0,
         oilMileage: undefined,
         isPopular: false,
+        isUnlimited: false,
+        isActive: true,
       });
     }
   }, [product, open]);
@@ -241,6 +362,9 @@ function ProductDialog({
     const cleanForm = { ...form };
     if (cleanForm.category !== "Engine Oil") {
       delete cleanForm.oilMileage;
+    }
+    if (cleanForm.isUnlimited) {
+      cleanForm.stock = 0;
     }
 
     if (product) {
@@ -341,12 +465,31 @@ function ProductDialog({
             </div>
             <div>
               <Label>الكمية المتاحة</Label>
-              <Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} />
+              <Input
+                type="number"
+                value={form.stock}
+                disabled={form.isUnlimited}
+                onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
+              />
             </div>
           </div>
 
-          {/* Popular toggle */}
+          {/* Unlimited Stock toggle */}
           <div className="flex items-center justify-between rounded-lg border border-border p-3 bg-muted/20 mt-2">
+            <div className="space-y-0.5">
+              <Label className="font-semibold text-sm">مخزون غير محدود / خدمات</Label>
+              <span className="text-xs text-muted-foreground block">
+                قم بتفعيل هذا الخيار للمنتجات أو الخدمات التي لا تحتاج لمتابعة كمية مخزونها.
+              </span>
+            </div>
+            <Switch
+              checked={form.isUnlimited || false}
+              onCheckedChange={(checked) => setForm({ ...form, isUnlimited: checked, stock: checked ? 0 : form.stock })}
+            />
+          </div>
+
+          {/* Popular toggle */}
+          <div className="flex items-center justify-between rounded-lg border border-border p-3 bg-muted/20">
             <div className="space-y-0.5">
               <Label className="font-semibold text-sm">منتج شائع / سريع الوصول</Label>
               <span className="text-xs text-muted-foreground block">
@@ -356,6 +499,20 @@ function ProductDialog({
             <Switch
               checked={form.isPopular || false}
               onCheckedChange={(checked) => setForm({ ...form, isPopular: checked })}
+            />
+          </div>
+
+          {/* Active Status toggle */}
+          <div className="flex items-center justify-between rounded-lg border border-border p-3 bg-muted/20">
+            <div className="space-y-0.5">
+              <Label className="font-semibold text-sm">حالة المنتج (نشط / معطل)</Label>
+              <span className="text-xs text-muted-foreground block">
+                عند إلغاء تفعيل هذا الخيار، لن يظهر هذا المنتج في شاشة الكاشير (نقطة البيع) ولن يكون متاحاً للبيع.
+              </span>
+            </div>
+            <Switch
+              checked={form.isActive !== false}
+              onCheckedChange={(checked) => setForm({ ...form, isActive: checked })}
             />
           </div>
         </div>

@@ -15,6 +15,7 @@ export interface AppSettings {
   receiptWidth?: number;
   receiptMargin?: number;
   receiptFontSize?: number;
+  logoUrl?: string;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -28,6 +29,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   receiptWidth: 80,
   receiptMargin: 4,
   receiptFontSize: 11,
+  logoUrl: "/logo.jpg",
 };
 
 const getLocal = <T>(key: string, fallback: T): T => {
@@ -50,8 +52,43 @@ const setLocal = <T>(key: string, val: T): void => {
 let _customers = getLocal<Customer[]>("pos_customers", mockCustomers);
 let _products = getLocal<Product[]>("pos_products", mockProducts);
 let _sales = getLocal<Sale[]>("pos_sales", mockSales);
-let _users = getLocal<User[]>("pos_users", mockUsers);
+let _users = getLocal<User[]>("pos_users", mockUsers).map((u) => {
+  const match = mockUsers.find((mu) => mu.id === u.id);
+  return {
+    ...u,
+    username: u.username || match?.username || u.name.toLowerCase().replace(/[^a-z0-9]/g, "") || "user",
+    password: u.password || match?.password || "123",
+    permissions: u.role === "cashier" 
+      ? (u.permissions || match?.permissions || {
+          canDiscount: true,
+          canOpenShift: true,
+          canCloseShift: true,
+          canPrintSpotCheck: true
+        }) 
+      : undefined
+  };
+});
 let _settings = getLocal<AppSettings>("pos_settings", DEFAULT_SETTINGS);
+
+export function applyAppBranding(settings: AppSettings) {
+  if (typeof window === "undefined") return;
+  if (settings.companyNameAr) {
+    document.title = settings.companyNameAr;
+  }
+  if (settings.logoUrl) {
+    let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.href = settings.logoUrl;
+  }
+}
+
+if (typeof window !== "undefined") {
+  setTimeout(() => applyAppBranding(_settings), 0);
+}
 
 export const store = {
   get customers() {
@@ -92,6 +129,7 @@ export const store = {
   set settings(val: AppSettings) {
     _settings = val;
     setLocal("pos_settings", val);
+    applyAppBranding(val);
   },
 
   reset() {

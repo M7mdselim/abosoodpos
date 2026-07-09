@@ -1,4 +1,7 @@
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | null | undefined): string {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return "0.00 ج.م";
+  }
   return `${amount.toFixed(2)} ج.م`;
 }
 

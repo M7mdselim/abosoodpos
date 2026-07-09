@@ -1,10 +1,20 @@
 export type UserRole = "developer" | "admin" | "cashier";
 
+export interface UserPermissions {
+  canDiscount: boolean;
+  canOpenShift: boolean;
+  canCloseShift: boolean;
+  canPrintSpotCheck: boolean;
+}
+
 export interface User {
   id: string;
   name: string;
+  username: string;
+  password?: string;
   role: UserRole;
   status: "active" | "inactive";
+  permissions?: UserPermissions;
 }
 
 export type ProductCategory =
@@ -27,6 +37,8 @@ export interface Product {
   stock: number;
   oilMileage?: number; // Optional oil mileage (e.g. 5000, 10000)
   isPopular?: boolean; // Fast access for cashier
+  isUnlimited?: boolean; // Unlimited stock flag
+  isActive?: boolean; // Is product active/enabled
 }
 
 export interface CustomerCar {

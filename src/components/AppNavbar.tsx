@@ -106,11 +106,18 @@ const categories: NavCategory[] = [
         roles: ["developer", "admin"],
       },
       {
+        to: "/logs",
+        label: "Audit Logs",
+        description: "Track user audit logs and system actions.",
+        icon: Terminal,
+        roles: ["developer", "admin"],
+      },
+      {
         to: "/settings",
         label: "Settings",
         description: "Configure receipt printer dimensions and print layouts.",
         icon: Settings,
-        roles: ["developer", "admin", "cashier"],
+        roles: ["developer"],
       },
       {
         to: "/developer",
@@ -170,9 +177,13 @@ export function AppNavbar() {
       {/* Left side: Logo & Brand + Categorized Horizontal Menu */}
       <div className="flex items-center gap-8">
         <Link to="/pos" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-            <Wrench className="h-5 w-5" />
-          </div>
+          {settings.logoUrl ? (
+            <img src={settings.logoUrl} alt="Logo" className="h-9 w-9 object-cover rounded-full shadow-sm border border-border bg-white" />
+          ) : (
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+              <Wrench className="h-5 w-5" />
+            </div>
+          )}
           <div className="flex flex-col">
             <span className="font-black text-sm tracking-tight leading-none text-foreground">{settings.companyNameEn}</span>
             <span className="text-[9px] text-muted-foreground font-semibold mt-1 tracking-wider uppercase leading-none">{settings.sloganEn}</span>

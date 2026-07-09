@@ -1,37 +1,61 @@
 import type { UserRole } from "@/types";
+import { userLogService } from "./userLogService";
+import { store } from "./store";
 
 export interface SessionUser {
   id: string;
   name: string;
   role: UserRole;
   username: string;
+  permissions?: {
+    canDiscount: boolean;
+    canOpenShift: boolean;
+    canCloseShift: boolean;
+    canPrintSpotCheck: boolean;
+  };
 }
-
-const MOCK_ACCOUNTS = [
-  { id: "u_dev", username: "dev", password: "dev", name: "System Developer", role: "developer" as UserRole },
-  { id: "u_admin", username: "admin", password: "admin", name: "Admin Manager", role: "admin" as UserRole },
-  { id: "u_cashier", username: "cashier", password: "cashier", name: "Ahmed (Cashier)", role: "cashier" as UserRole },
-];
 
 export const authService = {
   login(username: string, password: string): SessionUser | null {
-    const account = MOCK_ACCOUNTS.find(
-      (a) => a.username.toLowerCase() === username.toLowerCase() && a.password === password
+    // 1. Check static Developer credentials (selim / 123)
+    if (username.toLowerCase() === "selim" && password === "123") {
+      const session: SessionUser = {
+        id: "u_dev",
+        name: "System Developer (Selim)",
+        role: "developer",
+        username: "selim",
+      };
+      localStorage.setItem("app_session", JSON.stringify(session));
+      userLogService.log(session.id, session.name, session.role, "تسجيل الدخول", `تم تسجيل دخول مطور النظام بنجاح.`);
+      return session;
+    }
+
+    // 2. Fallback to dynamic database accounts
+    const user = store.users.find(
+      (u) => u.username && u.username.toLowerCase() === username.toLowerCase() && u.password === password
     );
-    if (!account) return null;
+
+    if (!user) return null;
+    if (user.status !== "active") return null;
 
     const session: SessionUser = {
-      id: account.id,
-      name: account.name,
-      role: account.role,
-      username: account.username,
+      id: user.id,
+      name: user.name,
+      role: user.role,
+      username: user.username,
+      permissions: user.permissions,
     };
 
     localStorage.setItem("app_session", JSON.stringify(session));
+    userLogService.log(session.id, session.name, session.role, "تسجيل الدخول", `تم تسجيل دخول المستخدم ${session.name} بنجاح.`);
     return session;
   },
 
   logout(): void {
+    const session = this.getSession();
+    if (session) {
+      userLogService.log(session.id, session.name, session.role, "تسجيل الخروج", `تم تسجيل خروج المستخدم ${session.name}.`);
+    }
     localStorage.removeItem("app_session");
   },
 
