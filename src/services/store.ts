@@ -12,6 +12,9 @@ export interface AppSettings {
   phone: string;
   address: string;
   shiftMode: "single" | "multiple";
+  receiptWidth?: number;
+  receiptMargin?: number;
+  receiptFontSize?: number;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -22,6 +25,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   phone: "01021111666",
   address: "المحلة الكبرى، مصر",
   shiftMode: "multiple",
+  receiptWidth: 80,
+  receiptMargin: 4,
+  receiptFontSize: 11,
 };
 
 const getLocal = <T>(key: string, fallback: T): T => {

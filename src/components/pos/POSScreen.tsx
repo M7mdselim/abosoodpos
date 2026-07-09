@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Search, Plus, Minus, Trash2, X, Printer, CreditCard, Banknote, CheckCircle2, UserPlus, Zap, Play, ShoppingCart, Star } from "lucide-react";
 import { toast } from "sonner";
 
@@ -906,138 +907,282 @@ function ReceiptDialog({
   const settings = store.settings;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm p-4">
-        <DialogHeader className="pb-1">
-          <DialogTitle className="flex items-center gap-2 text-green-600 text-sm">
-            <CheckCircle2 className="h-4 w-4" /> اكتملت عملية البيع
-          </DialogTitle>
-        </DialogHeader>
-        
-        {/* Print Styles for thermal rolls */}
-        <style>{`
-          @media print {
-            body * {
-              visibility: hidden;
-            }
-            #receipt-print, #receipt-print * {
-              visibility: visible;
-            }
-            #receipt-print {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100% !important;
-              max-width: 100% !important;
-              padding: 0 !important;
-              margin: 0 !important;
-              border: none !important;
-              box-shadow: none !important;
-              background: white !important;
-              color: black !important;
-            }
-          }
-        `}</style>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-sm p-4">
+          <DialogHeader className="pb-1">
+            <DialogTitle className="flex items-center gap-2 text-green-600 text-sm">
+              <CheckCircle2 className="h-4 w-4" /> اكتملت عملية البيع
+            </DialogTitle>
+          </DialogHeader>
 
-        {/* Compact Thermal Receipt Layout */}
+          {/* Screen receipt preview dialog container */}
+          <div 
+            id="receipt-print" 
+            dir="rtl"
+            className="rounded-md border border-border bg-white p-3 font-sans text-[11px] leading-normal text-black"
+          >
+            {/* Header */}
+            <div className="text-center">
+              <div className="text-sm font-black text-black">{settings.companyNameAr}</div>
+              <div className="text-[10px] mt-0.5 font-semibold text-black">{settings.sloganAr}</div>
+              <div className="text-[9px] mt-1 text-black font-medium">
+                {settings.phone && `ت: ${settings.phone}`}
+                {settings.phone && settings.address && " | "}
+                {settings.address && `${settings.address}`}
+              </div>
+            </div>
+            
+            <div className="my-2 border-t-2 border-dashed border-black" />
+            
+            {/* Metadata */}
+            <div className="grid grid-cols-2 gap-y-1 text-[10px] text-black">
+              <div><b>رقم الفاتورة:</b></div>
+              <div className="text-left font-bold">{sale.invoiceNumber}</div>
+              <div><b>التاريخ والوقت:</b></div>
+              <div className="text-left">
+                {new Date(sale.date).toLocaleDateString("ar-EG")} {new Date(sale.date).toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
+              </div>
+              <div><b>أمين الصندوق:</b></div>
+              <div className="text-left">{sale.cashierName}</div>
+            </div>
+            
+            <div className="my-2 border-t border-dashed border-black" />
+            
+            {/* Customer */}
+            <div className="text-[10px] text-right leading-tight space-y-0.5 bg-black/[0.01] p-1.5 border border-dashed border-black rounded">
+              <div><b>العميل:</b> {sale.customerName}</div>
+              <div><b>الهاتف:</b> {sale.customerPhone}</div>
+              <div><b>السيارة:</b> {sale.carBrand} {sale.carModel} — {sale.km.toLocaleString()} كم</div>
+            </div>
+            
+            <div className="my-2 border-t border-dashed border-black" />
+            
+            {/* Product Items Table */}
+            <table className="w-full text-[10px] text-black border-collapse">
+              <thead>
+                <tr className="border-b border-black text-right font-bold">
+                  <th className="py-1 text-right w-[45%]">البند</th>
+                  <th className="py-1 text-center w-[15%]">الكمية</th>
+                  <th className="py-1 text-left w-[20%] font-bold">السعر</th>
+                  <th className="py-1 text-left w-[20%] font-bold">الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sale.items.map((it) => (
+                  <tr key={it.productId} className="border-b border-dashed border-black/20">
+                    <td className="py-1 text-right">{it.name}</td>
+                    <td className="py-1 text-center">{it.quantity}</td>
+                    <td className="py-1 text-left">{it.unitPrice.toFixed(0)}</td>
+                    <td className="py-1 text-left font-bold">{(it.quantity * it.unitPrice).toFixed(0)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            
+            <div className="my-2 border-t border-dashed border-black" />
+            
+            {/* Totals */}
+            <div className="space-y-1 text-[10px] text-black">
+              <Row label="الإجمالي الفرعي" value={`${sale.subtotal.toFixed(0)} ج.م`} />
+              {sale.discount > 0 && <Row label="الخصم" value={`-${sale.discount.toFixed(0)} ج.م`} />}
+              {sale.vat > 0 && <Row label="الضريبة (15%)" value={`${sale.vat.toFixed(0)} ج.م`} />}
+              <div className="flex justify-between border-y-2 border-black py-1 text-xs font-extrabold my-1 text-black">
+                <span>الإجمالي الكلي</span>
+                <span>{sale.total.toFixed(0)} ج.م</span>
+              </div>
+              <Row label="طريقة الدفع" value={sale.paymentMethod === "Cash" ? "نقدي" : "كارت"} />
+            </div>
+            
+            {/* Conditional Next Recommended Change Calculation */}
+            {sale.oilUsed && sale.oilMileage && (
+              <>
+                <div className="my-2 border-t border-dashed border-black" />
+                <div className="border border-black p-2 rounded text-center text-[10px] bg-black/[0.01]">
+                  <div className="font-bold text-black">تغيير الزيت القادم الموصى به ({sale.oilMileage.toLocaleString()} كم)</div>
+                  <div className="mt-1 text-base font-extrabold text-black tracking-wide">
+                    {(sale.km + sale.oilMileage).toLocaleString()} كم
+                  </div>
+                </div>
+              </>
+            )}
+            
+            <div className="my-2 border-t border-dashed border-black" />
+            <div className="text-center text-[10px] text-black font-bold">
+              شكراً لزيارتكم — رافقتكم السلامة!
+            </div>
+          </div>
+
+          <DialogFooter className="gap-1.5 mt-2">
+            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>إغلاق</Button>
+            <Button size="sm" onClick={() => window.print()}>
+              <Printer className="mr-1.5 h-3.5 w-3.5" /> طباعة
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Render the identical clean print-only receipt sibling container directly in body */}
+      {open && typeof document !== "undefined" && createPortal(
         <div 
-          id="receipt-print" 
-          className="rounded-md border border-border bg-white p-3 font-mono text-[11px] leading-normal text-black"
+          id="receipt-print-only" 
+          dir="rtl"
         >
+          {/* Print Styles for thermal rolls (nested here so they are not inside a display:none container) */}
+          <style>{`
+            #receipt-print-only {
+              display: none;
+            }
+            @media print {
+              @page {
+                size: ${settings.receiptWidth || 80}mm auto;
+                margin: 0 !important;
+              }
+              html, body {
+                width: ${settings.receiptWidth || 80}mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: visible !important;
+                height: auto !important;
+                background: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              /* Hide the main application container and all dialog portals */
+              #root,
+              [data-radix-portal],
+              body > *:not(#receipt-print-only) {
+                display: none !important;
+              }
+              /* Show only the flat print-only sibling container */
+              #receipt-print-only {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 6mm ${settings.receiptMargin !== undefined ? settings.receiptMargin : 4}mm !important;
+                margin: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                background: white !important;
+                direction: rtl !important;
+                font-family: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif !important;
+                font-size: ${settings.receiptFontSize || 11}px !important;
+              }
+              #receipt-print-only * {
+                font-family: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif !important;
+                color: black !important;
+                border-color: black !important;
+                opacity: 1 !important;
+              }
+              #receipt-print-only table,
+              #receipt-print-only td,
+              #receipt-print-only th,
+              #receipt-print-only .grid {
+                font-size: 0.95em !important;
+              }
+              #receipt-print-only h1,
+              #receipt-print-only .text-sm {
+                font-size: 1.1em !important;
+              }
+              #receipt-print-only .text-base {
+                font-size: 1.25em !important;
+              }
+            }
+          `}</style>
+
           {/* Header */}
           <div className="text-center">
-            <div className="text-sm font-extrabold">{settings.companyNameAr}</div>
-            <div className="text-[10px] mt-0.5">{settings.sloganAr}</div>
-            <div className="text-[9px] mt-0.5">
+            <div className="text-sm font-black text-black">{settings.companyNameAr}</div>
+            <div className="text-[10px] mt-0.5 font-semibold text-black">{settings.sloganAr}</div>
+            <div className="text-[9px] mt-1 text-black font-medium">
               {settings.phone && `ت: ${settings.phone}`}
               {settings.phone && settings.address && " | "}
               {settings.address && `${settings.address}`}
             </div>
           </div>
           
-          <div className="my-1.5 border-t border-dashed border-black/60" />
+          <div className="my-2 border-t-2 border-dashed border-black" />
           
           {/* Metadata */}
-          <div className="grid grid-cols-2 gap-0.5 text-[10px]">
-            <div>رقم الفاتورة:</div>
-            <div className="text-right font-bold">{sale.invoiceNumber}</div>
-            <div>التاريخ:</div>
-            <div className="text-right">{new Date(sale.date).toLocaleDateString("ar-EG")}</div>
-            <div>أمين الصندوق:</div>
-            <div className="text-right">{sale.cashierName}</div>
+          <div className="grid grid-cols-2 gap-y-1 text-[10px] text-black">
+            <div><b>رقم الفاتورة:</b></div>
+            <div className="text-left font-bold">{sale.invoiceNumber}</div>
+            <div><b>التاريخ والوقت:</b></div>
+            <div className="text-left">
+              {new Date(sale.date).toLocaleDateString("ar-EG")} {new Date(sale.date).toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <div><b>أمين الصندوق:</b></div>
+            <div className="text-left">{sale.cashierName}</div>
           </div>
           
-          <div className="my-1.5 border-t border-dashed border-black/60" />
+          <div className="my-2 border-t border-dashed border-black" />
           
           {/* Customer */}
-          <div className="text-[10px] text-left leading-tight">
+          <div className="text-[10px] text-right leading-tight space-y-0.5 bg-black/[0.01] p-1.5 border border-dashed border-black rounded">
             <div><b>العميل:</b> {sale.customerName}</div>
             <div><b>الهاتف:</b> {sale.customerPhone}</div>
             <div><b>السيارة:</b> {sale.carBrand} {sale.carModel} — {sale.km.toLocaleString()} كم</div>
           </div>
           
-          <div className="my-1.5 border-t border-dashed border-black/60" />
+          <div className="my-2 border-t border-dashed border-black" />
           
           {/* Product Items Table */}
-          <table className="w-full text-[10px]">
+          <table className="w-full text-[10px] text-black border-collapse">
             <thead>
-              <tr className="border-b border-black/60 text-left">
-                <th className="py-0.5">البند</th>
-                <th className="text-center">الكمية</th>
-                <th className="text-right">الإجمالي</th>
+              <tr className="border-b border-black text-right font-bold">
+                <th className="py-1 text-right w-[45%]">البند</th>
+                <th className="py-1 text-center w-[15%]">الكمية</th>
+                <th className="py-1 text-left w-[20%] font-bold">السعر</th>
+                <th className="py-1 text-left w-[20%] font-bold">الإجمالي</th>
               </tr>
             </thead>
             <tbody>
               {sale.items.map((it) => (
-                <tr key={it.productId}>
-                  <td className="py-0.5">{it.name}</td>
-                  <td className="text-center">{it.quantity}</td>
-                  <td className="text-right">{(it.quantity * it.unitPrice).toFixed(0)}</td>
+                <tr key={it.productId} className="border-b border-dashed border-black/20">
+                  <td className="py-1 text-right">{it.name}</td>
+                  <td className="py-1 text-center">{it.quantity}</td>
+                  <td className="py-1 text-left">{it.unitPrice.toFixed(0)}</td>
+                  <td className="py-1 text-left font-bold">{(it.quantity * it.unitPrice).toFixed(0)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           
-          <div className="my-1.5 border-t border-dashed border-black/60" />
+          <div className="my-2 border-t border-dashed border-black" />
           
           {/* Totals */}
-          <div className="space-y-0.5 text-[10px]">
-            <Row label="الإجمالي الفرعي" value={sale.subtotal.toFixed(0)} />
-            {sale.discount > 0 && <Row label="الخصم" value={`-${sale.discount.toFixed(0)}`} />}
-            {sale.vat > 0 && <Row label="الضريبة (15%)" value={sale.vat.toFixed(0)} />}
-            <div className="flex justify-between border-t border-black/40 pt-1 text-xs font-bold">
+          <div className="space-y-1 text-[10px] text-black">
+            <Row label="الإجمالي الفرعي" value={`${sale.subtotal.toFixed(0)} ج.م`} />
+            {sale.discount > 0 && <Row label="الخصم" value={`-${sale.discount.toFixed(0)} ج.م`} />}
+            {sale.vat > 0 && <Row label="الضريبة (15%)" value={`${sale.vat.toFixed(0)} ج.م`} />}
+            <div className="flex justify-between border-y-2 border-black py-1 text-xs font-extrabold my-1 text-black">
               <span>الإجمالي الكلي</span>
               <span>{sale.total.toFixed(0)} ج.م</span>
             </div>
-            <Row label="الدفع" value={sale.paymentMethod === "Cash" ? "نقدي" : "كارت"} />
+            <Row label="طريقة الدفع" value={sale.paymentMethod === "Cash" ? "نقدي" : "كارت"} />
           </div>
           
           {/* Conditional Next Recommended Change Calculation */}
           {sale.oilUsed && sale.oilMileage && (
             <>
-              <div className="my-1.5 border-t border-dashed border-black/60" />
-              <div className="text-center text-[10px]">
-                <div className="font-bold">تغيير الزيت القادم الموصى به ({sale.oilMileage.toLocaleString()} كم)</div>
-                <div className="mt-0.5 text-sm font-extrabold text-black">
+              <div className="my-2 border-t border-dashed border-black" />
+              <div className="border border-black p-2 rounded text-center text-[10px] bg-black/[0.01]">
+                <div className="font-bold text-black">تغيير الزيت القادم الموصى به ({sale.oilMileage.toLocaleString()} كم)</div>
+                <div className="mt-1 text-base font-extrabold text-black tracking-wide">
                   {(sale.km + sale.oilMileage).toLocaleString()} كم
                 </div>
               </div>
             </>
           )}
           
-          <div className="my-1.5 border-t border-dashed border-black/60" />
-          <div className="text-center text-[9px] text-black/80 font-bold">
+          <div className="my-2 border-t border-dashed border-black" />
+          <div className="text-center text-[10px] text-black font-bold">
             شكراً لزيارتكم — رافقتكم السلامة!
           </div>
-        </div>
-        
-        <DialogFooter className="gap-1.5 mt-2">
-          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>إغلاق</Button>
-          <Button size="sm" onClick={() => window.print()}>
-            <Printer className="mr-1.5 h-3.5 w-3.5" /> طباعة
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>,
+        document.body
+      )}
+    </>
   );
 }

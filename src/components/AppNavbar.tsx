@@ -12,6 +12,7 @@ import {
   Terminal,
   FileText,
   ChevronDown,
+  Settings,
 } from "lucide-react";
 import { useSession } from "@/context/RoleContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -103,6 +104,13 @@ const categories: NavCategory[] = [
         description: "Manage cashiers, admins, and permissions.",
         icon: UserCog,
         roles: ["developer", "admin"],
+      },
+      {
+        to: "/settings",
+        label: "Settings",
+        description: "Configure receipt printer dimensions and print layouts.",
+        icon: Settings,
+        roles: ["developer", "admin", "cashier"],
       },
       {
         to: "/developer",
