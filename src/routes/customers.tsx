@@ -54,7 +54,7 @@ function CustomersPage() {
         />
       </div>
 
-      <div className="rounded-xl border border-border bg-card">
+      <div className="rounded-xl border border-border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -127,7 +127,7 @@ function CustomerDetails({
             <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">
               Registered Vehicles ({customer.cars?.length || 1})
             </h3>
-            <div className="rounded-lg border border-border bg-background">
+            <div className="rounded-lg border border-border bg-background overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

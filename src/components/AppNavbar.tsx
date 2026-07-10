@@ -119,7 +119,7 @@ const categories: NavCategory[] = [
         label: "Settings",
         description: "Configure receipt printer dimensions and print layouts.",
         icon: Settings,
-        roles: ["developer"],
+        roles: ["developer", "admin"],
       },
       {
         to: "/developer",

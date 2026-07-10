@@ -113,7 +113,7 @@ function UsersPage() {
         </div>
 
         {/* Users Table */}
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="rounded-xl border border-border bg-card overflow-x-auto">
           <Table>
             <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
               <TableRow>

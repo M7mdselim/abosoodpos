@@ -72,6 +72,33 @@ let _settings = getLocal<AppSettings>("pos_settings", DEFAULT_SETTINGS);
 const DEFAULT_CATEGORIES: string[] = [];
 let _categories = getLocal<string[]>("pos_categories", []);
 
+export const DEFAULT_CAR_BRANDS = [
+  { label: "تويوتا (Toyota)", value: "Toyota" },
+  { label: "هيونداي (Hyundai)", value: "Hyundai" },
+  { label: "كيا (Kia)", value: "Kia" },
+  { label: "نيسان (Nissan)", value: "Nissan" },
+  { label: "شيفروليه (Chevrolet)", value: "Chevrolet" },
+  { label: "ميتسوبيشي (Mitsubishi)", value: "Mitsubishi" },
+  { label: "ام جي (MG)", value: "MG" },
+  { label: "شيري (Chery)", value: "Chery" },
+  { label: "فيات (Fiat)", value: "Fiat" },
+  { label: "رينو (Renault)", value: "Renault" },
+  { label: "بيجو (Peugeot)", value: "Peugeot" },
+  { label: "بي واي دي (BYD)", value: "BYD" },
+  { label: "سوزوكي (Suzuki)", value: "Suzuki" },
+  { label: "مرسيدس (Mercedes-Benz)", value: "Mercedes-Benz" },
+  { label: "بي ام دبليو (BMW)", value: "BMW" },
+  { label: "فولكس فاجن (Volkswagen)", value: "Volkswagen" },
+  { label: "أوبل (Opel)", value: "Opel" },
+  { label: "سكودا (Skoda)", value: "Skoda" },
+  { label: "جيب (Jeep)", value: "Jeep" },
+  { label: "فورد (Ford)", value: "Ford" },
+  { label: "هوندا (Honda)", value: "Honda" },
+  { label: "مازدا (Mazda)", value: "Mazda" },
+  { label: "جيلي (Geely)", value: "Geely" }
+];
+let _carBrands = getLocal<{ label: string; value: string }[]>("pos_car_brands", DEFAULT_CAR_BRANDS);
+
 export function applyAppBranding(settings: AppSettings) {
   if (typeof window === "undefined") return;
   if (settings.companyNameAr) {
@@ -177,6 +204,29 @@ export const store = {
     setLocal("pos_categories", val);
   },
 
+  get carBrands() {
+    return _carBrands;
+  },
+  set carBrands(val: { label: string; value: string }[]) {
+    const isSame = JSON.stringify(_carBrands) === JSON.stringify(val);
+    _carBrands = val;
+    setLocal("pos_car_brands", val);
+    if (!isSame && typeof window !== "undefined") {
+      fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ carBrands: val }),
+      }).catch((err) =>
+        console.error("Error saving car brands to backend settings:", err)
+      );
+    }
+  },
+
+  setCarBrandsFromSync(val: { label: string; value: string }[]) {
+    _carBrands = val;
+    setLocal("pos_car_brands", val);
+  },
+
   reset() {
     this.customers = [];
     this.products = [];
@@ -184,6 +234,7 @@ export const store = {
     this.users = [];
     this.categories = [...DEFAULT_CATEGORIES];
     this.settings = { ...DEFAULT_SETTINGS };
+    this.carBrands = [...DEFAULT_CAR_BRANDS];
     localStorage.removeItem("app_shifts");
   },
 };

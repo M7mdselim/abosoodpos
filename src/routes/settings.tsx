@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { useSession } from "@/context/RoleContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { authService } from "@/services/authService";
-import { store } from "@/services/store";
+import { store, DEFAULT_CAR_BRANDS } from "@/services/store";
 import { backendService } from "@/services/backendService";
 import { PageShell } from "@/components/PageShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Wrench, Printer, Sliders, RefreshCw, Eye } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings")({
   beforeLoad: () => {
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/settings")({
       throw redirect({ to: "/login" });
     }
     const session = authService.getSession();
-    if (session?.role !== "developer") {
+    if (session?.role !== "developer" && session?.role !== "admin") {
       throw redirect({ to: "/pos" });
     }
   },
@@ -37,6 +38,13 @@ function SettingsPage() {
   const [receiptWidth, setReceiptWidth] = useState(settings.receiptWidth || 80);
   const [receiptMargin, setReceiptMargin] = useState(settings.receiptMargin !== undefined ? settings.receiptMargin : 4);
   const [receiptFontSize, setReceiptFontSize] = useState(settings.receiptFontSize || 11);
+
+  // Tab state & brand management state
+  const [activeTab, setActiveTab] = useState<"printer" | "brands">("printer");
+  const [carBrands, setCarBrands] = useState(() => store.carBrands || []);
+  const [newBrandAr, setNewBrandAr] = useState("");
+  const [newBrandEn, setNewBrandEn] = useState("");
+  const [brandSearch, setBrandSearch] = useState("");
 
   const handleSaveSettings = () => {
     const updated = {
@@ -73,6 +81,42 @@ function SettingsPage() {
     );
   };
 
+  const handleAddBrand = () => {
+    if (!newBrandAr.trim() || !newBrandEn.trim()) {
+      toast.error(language === "ar" ? "يرجى كتابة الاسم بالعربية والإنجليزية" : "Please fill both Arabic and English names");
+      return;
+    }
+    const label = `${newBrandAr.trim()} (${newBrandEn.trim()})`;
+    const value = newBrandEn.trim();
+
+    if (carBrands.some((b) => b.value.toLowerCase() === value.toLowerCase())) {
+      toast.error(language === "ar" ? "هذه السيارة مسجلة بالفعل" : "This car brand already exists");
+      return;
+    }
+
+    const updatedBrands = [...carBrands, { label, value }];
+    setCarBrands(updatedBrands);
+    store.carBrands = updatedBrands;
+    setNewBrandAr("");
+    setNewBrandEn("");
+    toast.success(language === "ar" ? "تم إضافة الماركة بنجاح" : "Brand added successfully");
+  };
+
+  const handleDeleteBrand = (valueToDelete: string) => {
+    const updatedBrands = carBrands.filter((b) => b.value !== valueToDelete);
+    setCarBrands(updatedBrands);
+    store.carBrands = updatedBrands;
+    toast.success(language === "ar" ? "تم حذف الماركة بنجاح" : "Brand deleted successfully");
+  };
+
+  const handleResetBrands = () => {
+    if (confirm(language === "ar" ? "هل أنت متأكد من استعادة القائمة الافتراضية للماركات؟" : "Are you sure you want to restore default car brands?")) {
+      setCarBrands(DEFAULT_CAR_BRANDS);
+      store.carBrands = DEFAULT_CAR_BRANDS;
+      toast.success(language === "ar" ? "تم استعادة القائمة الافتراضية" : "Restored default car brands successfully");
+    }
+  };
+
   // Mock sale data for the receipt preview
   const mockPreviewSale = {
     invoiceNumber: "20269999",
@@ -98,10 +142,36 @@ function SettingsPage() {
 
   return (
     <PageShell
-      title={language === "ar" ? "إعدادات الطابعة والفواتير" : "Printer & Receipt Settings"}
-      subtitle={language === "ar" ? "تخصيص عرض الورق، الهوامش وحجم الخط ليلائم طابعتك الحرارية" : "Configure receipt roll width, margin spacing, and print font sizing"}
+      title={language === "ar" ? "الإعدادات العامة" : "General Settings"}
+      subtitle={language === "ar" ? "تخصيص الفواتير وإدارة ماركات السيارات بالنظام" : "Configure receipt templates and manage system car brands"}
     >
-      <div className="grid gap-6 md:grid-cols-5 items-start">
+      {/* Tab Switcher */}
+      <div className="flex border-b border-border mb-6">
+        <button
+          onClick={() => setActiveTab("printer")}
+          className={cn(
+            "pb-3 pt-1 px-4 text-sm font-bold border-b-2 transition-colors",
+            activeTab === "printer"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {language === "ar" ? "إعدادات الطابعة والفواتير" : "Printer & Receipts"}
+        </button>
+        <button
+          onClick={() => setActiveTab("brands")}
+          className={cn(
+            "pb-3 pt-1 px-4 text-sm font-bold border-b-2 transition-colors",
+            activeTab === "brands"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {language === "ar" ? "ماركات السيارات" : "Car Brands"}
+        </button>
+      </div>
+      {activeTab === "printer" ? (
+        <div className="grid gap-6 md:grid-cols-5 items-start">
         {/* Left Control Panel: Columns 1-3 */}
         <div className="md:col-span-3 space-y-6">
           <Card className="border-border shadow-sm bg-card">
@@ -482,6 +552,116 @@ function SettingsPage() {
           </div>
         </div>
       </div>
+    ) : (
+        <div className="grid gap-6 md:grid-cols-5 items-start">
+          {/* Left Side: Brand Listing (Columns 1-3) */}
+          <div className="md:col-span-3 space-y-4">
+            <Card className="border border-border bg-card shadow-sm animate-in fade-in duration-200">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-foreground text-base">
+                  {language === "ar" ? "قائمة ماركات السيارات" : "Car Brands List"}
+                </CardTitle>
+                <CardDescription>
+                  {language === "ar"
+                    ? "هذه القائمة تظهر للكاشير عند تسجيل العملاء أو إضافة مركبات جديدة"
+                    : "This list is shown to cashiers when registering customers or adding new vehicles"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Search */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder={language === "ar" ? "البحث عن ماركة..." : "Search brands..."}
+                    value={brandSearch}
+                    onChange={(e) => setBrandSearch(e.target.value)}
+                    className="w-full h-10 px-3 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary text-right"
+                  />
+                </div>
+
+                {/* Brands Grid */}
+                <div className="border border-border rounded-lg max-h-[400px] overflow-y-auto divide-y divide-border">
+                  {carBrands
+                    .filter((b) =>
+                      b.label.toLowerCase().includes(brandSearch.toLowerCase()) ||
+                      b.value.toLowerCase().includes(brandSearch.toLowerCase())
+                    )
+                    .map((b) => (
+                      <div key={b.value} className="flex items-center justify-between p-3 bg-card hover:bg-accent/40 transition-colors">
+                        <div className="flex flex-col text-right">
+                          <span className="font-semibold text-sm">{b.label}</span>
+                          <span className="text-xs text-muted-foreground">Code/Value: {b.value}</span>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteBrand(b.value)}
+                          className="h-8 px-3 text-xs"
+                        >
+                          {language === "ar" ? "حذف" : "Delete"}
+                        </Button>
+                      </div>
+                    ))}
+                  {carBrands.filter((b) =>
+                    b.label.toLowerCase().includes(brandSearch.toLowerCase()) ||
+                    b.value.toLowerCase().includes(brandSearch.toLowerCase())
+                  ).length === 0 && (
+                    <div className="py-8 text-center text-muted-foreground text-sm">
+                      {language === "ar" ? "لا توجد ماركات تطابق البحث" : "No car brands match your search"}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-start">
+                  <Button variant="outline" size="sm" onClick={handleResetBrands} className="text-xs text-destructive hover:bg-destructive/10 border-destructive/20">
+                    {language === "ar" ? "استعادة القائمة الافتراضية" : "Restore Defaults"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Side: Add New Brand Card (Columns 4-5) */}
+          <div className="md:col-span-2 space-y-4 animate-in fade-in duration-200">
+            <Card className="border border-border bg-card shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-foreground text-base">
+                  {language === "ar" ? "إضافة ماركة جديدة" : "Add New Brand"}
+                </CardTitle>
+                <CardDescription>
+                  {language === "ar" ? "أدخل اسم ماركة السيارة بالعربية والإنجليزية" : "Enter car brand name in Arabic and English"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2 text-right">
+                  <Label>{language === "ar" ? "الاسم بالعربية" : "Name in Arabic"}</Label>
+                  <input
+                    type="text"
+                    placeholder="مثال: تويوتا، هيونداي"
+                    value={newBrandAr}
+                    onChange={(e) => setNewBrandAr(e.target.value)}
+                    className="w-full h-10 px-3 bg-background border border-input rounded-md text-sm text-right"
+                    dir="rtl"
+                  />
+                </div>
+                <div className="space-y-2 text-right">
+                  <Label>{language === "ar" ? "الاسم بالإنجليزية" : "Name in English"}</Label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Toyota, Hyundai"
+                    value={newBrandEn}
+                    onChange={(e) => setNewBrandEn(e.target.value)}
+                    className="w-full h-10 px-3 bg-background border border-input rounded-md text-sm text-left"
+                  />
+                </div>
+                <Button onClick={handleAddBrand} className="w-full h-10 font-bold">
+                  {language === "ar" ? "إضافة وحفظ" : "Add and Save"}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
 
       {/* Render the identical clean print-only receipt sibling container directly in body */}
       {typeof document !== "undefined" && createPortal(

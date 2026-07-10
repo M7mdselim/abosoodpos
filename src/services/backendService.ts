@@ -39,6 +39,9 @@ export const backendService = {
         if (settings.categories && Array.isArray(settings.categories)) {
           store.setCategoriesFromSync(settings.categories);
         }
+        if (settings.carBrands && Array.isArray(settings.carBrands)) {
+          store.setCarBrandsFromSync(settings.carBrands);
+        }
       }
 
       // 5. Sync Shifts

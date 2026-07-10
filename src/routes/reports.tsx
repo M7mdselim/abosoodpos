@@ -278,7 +278,7 @@ function DailyReport() {
       </div>
 
       {/* Report Table */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm print:border-none">
+      <div className="rounded-xl border border-border bg-card overflow-x-auto shadow-sm print:border-none">
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow>
@@ -491,7 +491,7 @@ function MonthlyReport() {
       </div>
 
       {/* Report Table */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm print:border-none">
+      <div className="rounded-xl border border-border bg-card overflow-x-auto shadow-sm print:border-none">
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow>
@@ -608,7 +608,7 @@ function ShiftsReport() {
         </Button>
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
+      <div className="rounded-xl border border-border bg-card overflow-x-auto shadow-xs">
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow>

@@ -216,8 +216,8 @@ function ShiftsPage() {
             </Card>
           ) : (
             <Card className="border-amber-500/20 bg-amber-500/5">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                <CardTitle className="text-amber-700 dark:text-amber-400 flex items-center gap-2">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:space-y-0 pb-4">
+                <CardTitle className="text-amber-700 dark:text-amber-400 flex items-center gap-2 text-base sm:text-lg">
                   <Square className="h-5 w-5" /> {t("close_shift")} ({t("active_shift")})
                 </CardTitle>
                 {hasPrintSpotPermission && (
@@ -315,7 +315,7 @@ function ShiftsPage() {
           {/* Shift History Section */}
           <div className="space-y-3">
             <h3 className="text-lg font-bold tracking-tight text-foreground">{t("shift_history")}</h3>
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="rounded-xl border border-border bg-card overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

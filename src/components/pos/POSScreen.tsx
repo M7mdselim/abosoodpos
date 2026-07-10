@@ -1419,32 +1419,6 @@ function ReceiptDialog({
   );
 }
 
-const CAR_BRANDS = [
-  { label: "تويوتا (Toyota)", value: "Toyota" },
-  { label: "هيونداي (Hyundai)", value: "Hyundai" },
-  { label: "كيا (Kia)", value: "Kia" },
-  { label: "نيسان (Nissan)", value: "Nissan" },
-  { label: "شيفروليه (Chevrolet)", value: "Chevrolet" },
-  { label: "ميتسوبيشي (Mitsubishi)", value: "Mitsubishi" },
-  { label: "ام جي (MG)", value: "MG" },
-  { label: "شيري (Chery)", value: "Chery" },
-  { label: "فيات (Fiat)", value: "Fiat" },
-  { label: "رينو (Renault)", value: "Renault" },
-  { label: "بيجو (Peugeot)", value: "Peugeot" },
-  { label: "بي واي دي (BYD)", value: "BYD" },
-  { label: "سوزوكي (Suzuki)", value: "Suzuki" },
-  { label: "مرسيدس (Mercedes-Benz)", value: "Mercedes-Benz" },
-  { label: "بي ام دبليو (BMW)", value: "BMW" },
-  { label: "فولكس فاجن (Volkswagen)", value: "Volkswagen" },
-  { label: "أوبل (Opel)", value: "Opel" },
-  { label: "سكودا (Skoda)", value: "Skoda" },
-  { label: "جيب (Jeep)", value: "Jeep" },
-  { label: "فورد (Ford)", value: "Ford" },
-  { label: "هوندا (Honda)", value: "Honda" },
-  { label: "مازدا (Mazda)", value: "Mazda" },
-  { label: "جيلي (Geely)", value: "Geely" }
-];
-
 function CarBrandSelector({
   value,
   onChange,
@@ -1468,11 +1442,12 @@ function CarBrandSelector({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return CAR_BRANDS;
-    return CAR_BRANDS.filter(
+    const brands = store.carBrands || [];
+    if (!q) return brands;
+    return brands.filter(
       (b) => b.label.toLowerCase().includes(q) || b.value.toLowerCase().includes(q)
     );
-  }, [search]);
+  }, [search, store.carBrands]);
 
   const handleSelect = (brandVal: string) => {
     onChange(brandVal);
@@ -1488,7 +1463,7 @@ function CarBrandSelector({
     }
   };
 
-  const selectedBrand = CAR_BRANDS.find((b) => b.value === value || b.label === value);
+  const selectedBrand = (store.carBrands || []).find((b) => b.value === value || b.label === value);
   const displayValue = selectedBrand ? selectedBrand.label : value;
 
   return (
@@ -1508,7 +1483,7 @@ function CarBrandSelector({
             placeholder="ابحث عن ماركة..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="mb-1.5 h-8 text-xs font-semibold"
+            className="mb-1.5 h-8 text-xs font-semibold text-right"
             onClick={(e) => e.stopPropagation()}
             autoFocus
           />
@@ -1527,7 +1502,7 @@ function CarBrandSelector({
               </button>
             ))}
 
-            {search.trim() && !CAR_BRANDS.some((b) => b.value.toLowerCase() === search.trim().toLowerCase()) && (
+            {search.trim() && !(store.carBrands || []).some((b) => b.value.toLowerCase() === search.trim().toLowerCase()) && (
               <button
                 type="button"
                 onClick={handleCustomAdd}

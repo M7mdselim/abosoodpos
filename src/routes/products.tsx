@@ -182,7 +182,7 @@ function ProductsPage() {
           className="h-12 pl-10"
         />
       </div>
-      <div className="rounded-xl border border-border bg-card">
+      <div className="rounded-xl border border-border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

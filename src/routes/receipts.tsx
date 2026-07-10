@@ -151,7 +151,7 @@ function ReceiptsPage() {
       </div>
 
       {/* Receipts Table */}
-      <div className="rounded-xl border border-border bg-card">
+      <div className="rounded-xl border border-border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
