@@ -83,7 +83,7 @@ async function seed() {
     await client.query("DELETE FROM products");
 
     const products = [
-      // Oils
+      // 1. زيوت محركات (Engine Oils) - 9 items
       { id: "p_oil_shell_10k", name: "زيت شل هيلكس ألترا 5W-30 (10 الاف)", brand: "شل", category: "زيوت محركات", barcode: "5011987141528", buying_price: 680, selling_price: 850, stock: 45, oil_mileage: 10000, is_popular: true, is_unlimited: false },
       { id: "p_oil_shell_5k", name: "زيت شل هيلكس HX7 10W-40 (5 الاف)", brand: "شل", category: "زيوت محركات", barcode: "5011987141511", buying_price: 480, selling_price: 600, stock: 55, oil_mileage: 5000, is_popular: true, is_unlimited: false },
       { id: "p_oil_mobil_10k", name: "زيت موبيل 1 FS 5W-30 (10 الاف)", brand: "موبيل", category: "زيوت محركات", barcode: "071924151012", buying_price: 720, selling_price: 900, stock: 30, oil_mileage: 10000, is_popular: true, is_unlimited: false },
@@ -91,33 +91,35 @@ async function seed() {
       { id: "p_oil_castrol_10k", name: "زيت كاسترول ماجناتيك 5W-40 (10 الاف)", brand: "كاسترول", category: "زيوت محركات", barcode: "9310084013401", buying_price: 580, selling_price: 760, stock: 35, oil_mileage: 10000, is_popular: true, is_unlimited: false },
       { id: "p_oil_castrol_5k", name: "زيت كاسترول GTX 15W-40 (5 الاف)", brand: "كاسترول", category: "زيوت محركات", barcode: "9310084013425", buying_price: 360, selling_price: 470, stock: 40, oil_mileage: 5000, is_popular: false, is_unlimited: false },
       { id: "p_oil_motul_10k", name: "زيت موتول 8100 إكس-ماكس 5W-40 (10 الاف)", brand: "موتول", category: "زيوت محركات", barcode: "3374650239088", buying_price: 790, selling_price: 980, stock: 25, oil_mileage: 10000, is_popular: false, is_unlimited: false },
+      { id: "p_oil_total_10k", name: "زيت توتال كوارتز 9000 5W-40 (10 الاف)", brand: "توتال", category: "زيوت محركات", barcode: "3425901018216", buying_price: 650, selling_price: 820, stock: 30, oil_mileage: 10000, is_popular: false, is_unlimited: false },
+      { id: "p_oil_total_5k", name: "زيت توتال كوارتز 7000 10W-40 (5 الاف)", brand: "توتال", category: "زيوت محركات", barcode: "3425901018223", buying_price: 440, selling_price: 560, stock: 35, oil_mileage: 5000, is_popular: false, is_unlimited: false },
       
-      // Oil Filters
-      { id: "p_filter_toyota_org", name: "فلتر زيت تويوتا أصلي (صغير)", brand: "تويوتا", category: "فلاتر زيت", barcode: "9091510003", buying_price: 90, selling_price: 140, stock: 120, oil_mileage: null, is_popular: true, is_unlimited: false },
-      { id: "p_filter_toyota_lrg", name: "فلتر زيت تويوتا أصلي (كبير)", brand: "تويوتا", category: "فلاتر زيت", barcode: "9091520003", buying_price: 100, selling_price: 160, stock: 85, oil_mileage: null, is_popular: false, is_unlimited: false },
-      { id: "p_filter_hyundai_org", name: "فلتر زيت هيونداي وكيا أصلي", brand: "هيونداي", category: "فلاتر زيت", barcode: "2630035505", buying_price: 80, selling_price: 120, stock: 110, oil_mileage: null, is_popular: true, is_unlimited: false },
-      { id: "p_filter_nissan_org", name: "فلتر زيت نيسان صني أصلي", brand: "نيسان", category: "فلاتر زيت", barcode: "1520831U0B", buying_price: 75, selling_price: 115, stock: 70, oil_mileage: null, is_popular: false, is_unlimited: false },
-      { id: "p_filter_wix_universal", name: "فلتر زيت ويكس أمريكي عمومي", brand: "WIX", category: "فلاتر زيت", barcode: "765809151505", buying_price: 50, selling_price: 80, stock: 150, oil_mileage: null, is_popular: false, is_unlimited: false },
+      // 2. فلاتر (Filters) - 10 items
+      { id: "p_filter_toyota_org", name: "فلتر زيت تويوتا أصلي (صغير)", brand: "تويوتا", category: "فلاتر", barcode: "9091510003", buying_price: 90, selling_price: 140, stock: 120, oil_mileage: null, is_popular: true, is_unlimited: false },
+      { id: "p_filter_toyota_lrg", name: "فلتر زيت تويوتا أصلي (كبير)", brand: "تويوتا", category: "فلاتر", barcode: "9091520003", buying_price: 100, selling_price: 160, stock: 85, oil_mileage: null, is_popular: false, is_unlimited: false },
+      { id: "p_filter_hyundai_org", name: "فلتر زيت هيونداي وكيا أصلي", brand: "هيونداي", category: "فلاتر", barcode: "2630035505", buying_price: 80, selling_price: 120, stock: 110, oil_mileage: null, is_popular: true, is_unlimited: false },
+      { id: "p_filter_nissan_org", name: "فلتر زيت نيسان صني أصلي", brand: "نيسان", category: "فلاتر", barcode: "1520831U0B", buying_price: 75, selling_price: 115, stock: 70, oil_mileage: null, is_popular: false, is_unlimited: false },
+      { id: "p_filter_wix_universal", name: "فلتر زيت ويكس أمريكي عمومي", brand: "WIX", category: "فلاتر", barcode: "765809151505", buying_price: 50, selling_price: 80, stock: 150, oil_mileage: null, is_popular: false, is_unlimited: false },
+      { id: "p_filter_air_corolla", name: "فلتر هواء تويوتا كورولا (2014-2022)", brand: "تويوتا", category: "فلاتر", barcode: "178010M020", buying_price: 140, selling_price: 210, stock: 40, oil_mileage: null, is_popular: false, is_unlimited: false },
+      { id: "p_filter_air_elantra", name: "فلتر هواء هيونداي إلنترا AD", brand: "هيونداي", category: "فلاتر", barcode: "28113F2000", buying_price: 120, selling_price: 180, stock: 35, oil_mileage: null, is_popular: false, is_unlimited: false },
+      { id: "p_filter_air_sunny", name: "فلتر هواء نيسان صني N17", brand: "نيسان", category: "فلاتر", barcode: "16546ED500", buying_price: 110, selling_price: 170, stock: 45, oil_mileage: null, is_popular: false, is_unlimited: false },
+      { id: "p_filter_ac_toyota", name: "فلتر تكييف تويوتا ياريس وكورولا", brand: "تويوتا", category: "فلاتر", barcode: "8713930040", buying_price: 110, selling_price: 180, stock: 30, oil_mileage: null, is_popular: false, is_unlimited: false },
+      { id: "p_filter_ac_hyundai", name: "فلتر تكييف هيونداي إلنترا وتوسان", brand: "هيونداي", category: "فلاتر", barcode: "97133F2000", buying_price: 100, selling_price: 160, stock: 25, oil_mileage: null, is_popular: false, is_unlimited: false },
       
-      // Air Filters
-      { id: "p_filter_air_corolla", name: "فلتر هواء تويوتا كورولا (2014-2022)", brand: "تويوتا", category: "فلاتر هواء", barcode: "178010M020", buying_price: 140, selling_price: 210, stock: 40, oil_mileage: null, is_popular: false, is_unlimited: false },
-      { id: "p_filter_air_elantra", name: "فلتر هواء هيونداي إلنترا AD", brand: "هيونداي", category: "فلاتر هواء", barcode: "28113F2000", buying_price: 120, selling_price: 180, stock: 35, oil_mileage: null, is_popular: false, is_unlimited: false },
-      { id: "p_filter_air_sunny", name: "فلتر هواء نيسان صني N17", brand: "نيسان", category: "فلاتر هواء", barcode: "16546ED500", buying_price: 110, selling_price: 170, stock: 45, oil_mileage: null, is_popular: false, is_unlimited: false },
-      
-      // Cabin / AC Filters
-      { id: "p_filter_ac_toyota", name: "فلتر تكييف تويوتا ياريس وكورولا", brand: "تويوتا", category: "فلاتر تكييف", barcode: "8713930040", buying_price: 110, selling_price: 180, stock: 30, oil_mileage: null, is_popular: false, is_unlimited: false },
-      { id: "p_filter_ac_hyundai", name: "فلتر تكييف هيونداي إلنترا وتوسان", brand: "هيونداي", category: "فلاتر تكييف", barcode: "97133F2000", buying_price: 100, selling_price: 160, stock: 25, oil_mileage: null, is_popular: false, is_unlimited: false },
-      
-      // Maintenance Fluids
+      // 3. سوائل صيانة (Maintenance Fluids) - 5 items
       { id: "p_fluid_acdelco_red", name: "مياه رادياتير إيه سي ديلكو حمراء 50/50", brand: "ACDelco", category: "سوائل صيانة", barcode: "19315053", buying_price: 220, selling_price: 320, stock: 25, oil_mileage: null, is_popular: true, is_unlimited: false },
       { id: "p_fluid_total_coolant", name: "مياه خضراء توتال للرادياتير 4 لتر", brand: "توتال", category: "سوائل صيانة", barcode: "3425901002345", buying_price: 170, selling_price: 250, stock: 30, oil_mileage: null, is_popular: false, is_unlimited: false },
       { id: "p_fluid_brake_dot4", name: "زيت باكم فرامل شل DOT 4", brand: "شل", category: "سوائل صيانة", barcode: "5011987002010", buying_price: 70, selling_price: 110, stock: 40, oil_mileage: null, is_popular: false, is_unlimited: false },
+      { id: "p_fluid_transmission_atf", name: "زيت فتيس أوتوماتيك موبيل ATF", brand: "موبيل", category: "سوائل صيانة", barcode: "071924252214", buying_price: 260, selling_price: 340, stock: 20, oil_mileage: null, is_popular: false, is_unlimited: false },
+      { id: "p_fluid_power_steering", name: "زيت باور دريكسيون شل ATF", brand: "شل", category: "سوائل صيانة", barcode: "5011987241280", buying_price: 140, selling_price: 190, stock: 15, oil_mileage: null, is_popular: false, is_unlimited: false },
       
-      // Spark Plugs & Consumables
+      // 4. قطع غيار استهلاكية (Consumables) - 4 items
       { id: "p_part_spark_ngk", name: "بوجيهات ليزر إيريديوم NGK (طقم 4)", brand: "NGK", category: "قطع غيار استهلاكية", barcode: "087295137680", buying_price: 380, selling_price: 520, stock: 20, oil_mileage: null, is_popular: false, is_unlimited: false },
       { id: "p_part_cleaner_wurth", name: "منظف إنجكشن Wurth ألماني", brand: "Wurth", category: "قطع غيار استهلاكية", barcode: "4045727003456", buying_price: 130, selling_price: 190, stock: 60, oil_mileage: null, is_popular: true, is_unlimited: false },
+      { id: "p_part_brake_pads_front", name: "تيل فرامل أمامي تويوتا كورولا", brand: "تويوتا", category: "قطع غيار استهلاكية", barcode: "0446502390", buying_price: 450, selling_price: 650, stock: 12, oil_mileage: null, is_popular: false, is_unlimited: false },
+      { id: "p_part_wiper_blades", name: "طقم مساحات زجاج أمامية عمومية", brand: "Wurth", category: "قطع غيار استهلاكية", barcode: "4045727110925", buying_price: 90, selling_price: 150, stock: 30, oil_mileage: null, is_popular: false, is_unlimited: false },
       
-      // Services (Labor)
+      // 5. خدمات (Services) - 3 items
       { id: "p_srv_oil_change", name: "مصنعية تغيير زيت محرك", brand: "أبو السعود", category: "خدمات", barcode: "", buying_price: 0, selling_price: 30, stock: 0, oil_mileage: null, is_popular: true, is_unlimited: true },
       { id: "p_srv_full_flushing", name: "مصنعية غسيل المحرك بالمنظف", brand: "أبو السعود", category: "خدمات", barcode: "", buying_price: 0, selling_price: 50, stock: 0, oil_mileage: null, is_popular: true, is_unlimited: true },
       { id: "p_srv_gearbox_oil", name: "مصنعية تغيير زيت فتيس (ناقل حركة)", brand: "أبو السعود", category: "خدمات", barcode: "", buying_price: 0, selling_price: 80, stock: 0, oil_mileage: null, is_popular: false, is_unlimited: true },
