@@ -6,6 +6,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { authService } from "@/services/authService";
 import { store } from "@/services/store";
 import { backendService } from "@/services/backendService";
+import { shiftService } from "@/services/shiftService";
 import { PageShell } from "@/components/PageShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,10 @@ import {
   Sliders,
   Eye,
   Wrench,
+  CalendarDays,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 
 export const Route = createFileRoute("/developer")({
@@ -64,6 +69,43 @@ function DeveloperControlsPage() {
   const [lowStockThreshold, setLowStockThreshold] = useState(() => {
     return currentSettings.lowStockThreshold !== undefined ? currentSettings.lowStockThreshold : 5;
   });
+
+  // Shift day management state
+  const [shiftTick, setShiftTick] = useState(0);
+  const allShifts = useMemo(() => shiftService.getShifts(), [shiftTick]);
+  const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
+  const [editingShiftDay, setEditingShiftDay] = useState<string>("");
+  const [shiftPage, setShiftPage] = useState(1);
+  const SHIFTS_PER_PAGE = 10;
+  const shiftTotalPages = Math.ceil(allShifts.length / SHIFTS_PER_PAGE) || 1;
+  const paginatedShifts = useMemo(() => {
+    const start = (shiftPage - 1) * SHIFTS_PER_PAGE;
+    return allShifts.slice(start, start + SHIFTS_PER_PAGE);
+  }, [allShifts, shiftPage]);
+
+  const handleEditShiftDay = (shiftId: string, currentDay: string) => {
+    setEditingShiftId(shiftId);
+    setEditingShiftDay(currentDay);
+  };
+
+  const handleSaveShiftDay = (shiftId: string) => {
+    if (!editingShiftDay.trim()) {
+      toast.error("يرجى إدخال تاريخ صحيح");
+      return;
+    }
+    const shifts = shiftService.getShifts();
+    const index = shifts.findIndex((s) => s.id === shiftId);
+    if (index === -1) {
+      toast.error("لم يتم العثور على الوردية");
+      return;
+    }
+    const oldDay = shifts[index].shiftDay;
+    shifts[index].shiftDay = editingShiftDay;
+    shiftService.saveShifts(shifts);
+    toast.success(`تم تعديل يوم الوردية من ${oldDay} إلى ${editingShiftDay}`);
+    setEditingShiftId(null);
+    setShiftTick((t) => t + 1);
+  };
 
 
   const handleToggleVat = (checked: boolean) => {
@@ -804,6 +846,143 @@ function DeveloperControlsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* ── Shift Day Management ──────────────────────────────── */}
+        <Card className="border-violet-500/25 shadow-sm bg-card md:col-span-2">
+          <CardHeader>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardTitle className="text-foreground flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5 text-violet-600" />
+                  إدارة وتعديل أيام الورديات
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  تعديل يوم الوردية لأي وردية ماضية أو حالية. هذا التعديل محلي فقط ولا يؤثر على البيانات المحفوظة في السيرفر.
+                </CardDescription>
+              </div>
+              {allShifts.length > 0 && (
+                <span className="shrink-0 text-xs text-muted-foreground font-semibold bg-muted rounded-lg px-2.5 py-1 border border-border">
+                  {allShifts.length} وردية
+                </span>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {allShifts.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">لا توجد ورديات مسجلة حتى الآن.</p>
+            ) : (
+              <>
+                <div className="overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/50">
+                        <th className="text-right px-4 py-2.5 font-bold text-xs text-muted-foreground whitespace-nowrap">#</th>
+                        <th className="text-right px-4 py-2.5 font-bold text-xs text-muted-foreground whitespace-nowrap">رقم الوردية</th>
+                        <th className="text-right px-4 py-2.5 font-bold text-xs text-muted-foreground whitespace-nowrap">الكاشير</th>
+                        <th className="text-right px-4 py-2.5 font-bold text-xs text-muted-foreground whitespace-nowrap">يوم الوردية</th>
+                        <th className="text-right px-4 py-2.5 font-bold text-xs text-muted-foreground whitespace-nowrap">الحالة</th>
+                        <th className="text-right px-4 py-2.5 font-bold text-xs text-muted-foreground whitespace-nowrap">تعديل</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedShifts.map((s, i) => {
+                        const globalIndex = (shiftPage - 1) * SHIFTS_PER_PAGE + i + 1;
+                        return (
+                          <tr key={s.id} className={`border-b border-border last:border-0 ${i % 2 === 0 ? "bg-card" : "bg-muted/20"}`}>
+                            <td className="px-4 py-2.5 text-xs text-muted-foreground font-semibold">{globalIndex}</td>
+                            <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{s.id.slice(-8)}</td>
+                            <td className="px-4 py-2.5 font-semibold">{s.cashierName}</td>
+                            <td className="px-4 py-2.5">
+                              {editingShiftId === s.id ? (
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="date"
+                                    value={editingShiftDay}
+                                    onChange={(e) => setEditingShiftDay(e.target.value)}
+                                    className="h-8 text-xs w-36"
+                                  />
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7 text-emerald-600 hover:bg-emerald-500/10"
+                                    onClick={() => handleSaveShiftDay(s.id)}
+                                  >
+                                    <Check className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                                    onClick={() => setEditingShiftId(null)}
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <span className="font-bold text-violet-700 dark:text-violet-400 font-mono">{s.shiftDay}</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                s.status === "open"
+                                  ? "bg-emerald-500/10 text-emerald-600"
+                                  : "bg-muted text-muted-foreground"
+                              }`}>
+                                {s.status === "open" ? "نشطة" : "مغلقة"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5">
+                              {editingShiftId !== s.id && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 px-2 text-xs gap-1 text-violet-700 hover:bg-violet-500/10"
+                                  onClick={() => handleEditShiftDay(s.id, s.shiftDay)}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                  تعديل
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {shiftTotalPages > 1 && (
+                  <div className="flex items-center justify-between pt-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs gap-1"
+                      disabled={shiftPage === 1}
+                      onClick={() => { setShiftPage((p) => Math.max(1, p - 1)); setEditingShiftId(null); }}
+                    >
+                      → السابق
+                    </Button>
+                    <span className="text-xs text-muted-foreground font-semibold">
+                      صفحة <span className="text-foreground font-black">{shiftPage}</span> من <span className="text-foreground font-black">{shiftTotalPages}</span>
+                      <span className="text-muted-foreground/70 mr-2">({allShifts.length} وردية)</span>
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs gap-1"
+                      disabled={shiftPage === shiftTotalPages}
+                      onClick={() => { setShiftPage((p) => Math.min(shiftTotalPages, p + 1)); setEditingShiftId(null); }}
+                    >
+                      التالي ←
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
       </div>
     </PageShell>
   );

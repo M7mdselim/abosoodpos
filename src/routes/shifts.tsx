@@ -49,6 +49,7 @@ function ShiftsPage() {
   const [tick, setTick] = useState<number>(0);
   const [printShift, setPrintShift] = useState<Shift | null>(null);
   const [printSalesShift, setPrintSalesShift] = useState<Shift | null>(null);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
 
   const forceRefresh = () => setTick((t) => t + 1);
 
@@ -100,14 +101,19 @@ function ShiftsPage() {
     forceRefresh();
   };
 
-  const handleCloseShift = (e: React.FormEvent) => {
+  const handleRequestCloseShift = (e: React.FormEvent) => {
     e.preventDefault();
     const amount = parseFloat(actualCash);
     if (isNaN(amount) || amount < 0) {
       toast.error("يرجى إدخال مبلغ إغلاق صحيح");
       return;
     }
+    // Open confirmation dialog instead of closing immediately
+    setShowCloseConfirm(true);
+  };
 
+  const handleConfirmCloseShift = () => {
+    const amount = parseFloat(actualCash);
     const closed = shiftService.closeShift(amount, closeNotes);
     if (closed) {
       const variance = amount - closed.expectedCash;
@@ -121,6 +127,7 @@ function ShiftsPage() {
     }
     setActualCash("");
     setCloseNotes("");
+    setShowCloseConfirm(false);
     forceRefresh();
   };
 
@@ -281,7 +288,7 @@ function ShiftsPage() {
                     لا تملك صلاحية لإغلاق الوردية الحالية. يرجى مراجعة مدير النظام.
                   </div>
                 ) : (
-                  <form onSubmit={handleCloseShift} className="space-y-4">
+                  <form onSubmit={handleRequestCloseShift} className="space-y-4">
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="actualCash" className="text-amber-900 dark:text-amber-300">
@@ -495,6 +502,107 @@ function ShiftsPage() {
         onClose={() => setPrintSalesShift(null)}
         shift={printSalesShift}
       />
+
+      {/* ── Close Shift Confirmation Dialog ─────────────────── */}
+      {activeShift && (
+        <Dialog open={showCloseConfirm} onOpenChange={(o) => !o && setShowCloseConfirm(false)}>
+          <DialogContent className="max-w-md" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="h-5 w-5" />
+                تأكيد إغلاق الوردية
+              </DialogTitle>
+            </DialogHeader>
+
+            {/* Shift Summary */}
+            <div className="space-y-3 py-2">
+              {/* Shift Day */}
+              <div className="flex items-center justify-between rounded-xl bg-amber-500/5 border border-amber-500/20 px-4 py-3">
+                <span className="text-sm font-bold text-amber-800 dark:text-amber-300">يوم نهاية الوردية</span>
+                <span className="font-black text-amber-700 dark:text-amber-400 tracking-wider">{activeShift.shiftDay}</span>
+              </div>
+
+              {/* Financial Summary Grid */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-border p-3 text-center space-y-1">
+                  <span className="text-[10px] text-muted-foreground font-bold block">المبلغ المتوقع</span>
+                  <span className="font-black text-sm text-foreground">{formatCurrency(activeShift.expectedCash)}</span>
+                </div>
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-border p-3 text-center space-y-1">
+                  <span className="text-[10px] text-muted-foreground font-bold block">المبلغ الفعلي</span>
+                  <span className="font-black text-sm text-primary">{formatCurrency(parseFloat(actualCash) || 0)}</span>
+                </div>
+                <div className={`rounded-xl border p-3 text-center space-y-1 ${
+                  (parseFloat(actualCash) || 0) - activeShift.expectedCash === 0
+                    ? "bg-emerald-500/10 border-emerald-500/30"
+                    : (parseFloat(actualCash) || 0) - activeShift.expectedCash > 0
+                    ? "bg-blue-500/10 border-blue-500/30"
+                    : "bg-destructive/10 border-destructive/30"
+                }`}>
+                  <span className="text-[10px] text-muted-foreground font-bold block">الفارق</span>
+                  <span className={`font-black text-sm ${
+                    (parseFloat(actualCash) || 0) - activeShift.expectedCash === 0
+                      ? "text-emerald-600"
+                      : (parseFloat(actualCash) || 0) - activeShift.expectedCash > 0
+                      ? "text-blue-600"
+                      : "text-destructive"
+                  }`}>
+                    {formatCurrency((parseFloat(actualCash) || 0) - activeShift.expectedCash)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Status message */}
+              {(() => {
+                const variance = (parseFloat(actualCash) || 0) - activeShift.expectedCash;
+                if (variance === 0) return (
+                  <p className="text-xs text-emerald-700 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 font-semibold text-center">
+                    ✅ الصندوق متطابق — لا يوجد فارق
+                  </p>
+                );
+                if (variance > 0) return (
+                  <p className="text-xs text-blue-700 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 font-semibold text-center">
+                    📈 يوجد فائض بقيمة {formatCurrency(variance)} — يرجى التحقق
+                  </p>
+                );
+                return (
+                  <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-3 font-semibold text-center">
+                    ⚠️ يوجد عجز بقيمة {formatCurrency(Math.abs(variance))} — يرجى التحقق قبل الإغلاق
+                  </p>
+                );
+              })()}
+
+              {closeNotes && (
+                <div className="text-xs text-muted-foreground bg-muted rounded-lg p-3 border border-border">
+                  <span className="font-bold text-foreground">ملاحظات: </span>{closeNotes}
+                </div>
+              )}
+
+              <p className="text-sm text-muted-foreground font-medium text-center pt-1">
+                هل أنت متأكد من إغلاق الوردية الحالية؟ لا يمكن التراجع عن هذا الإجراء.
+              </p>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowCloseConfirm(false)}
+                className="flex-1"
+              >
+                إلغاء — العودة للتعديل
+              </Button>
+              <Button
+                variant="default"
+                className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold"
+                onClick={handleConfirmCloseShift}
+              >
+                <Square className="h-4 w-4 mr-1" />
+                نعم، أغلق الوردية
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </PageShell>
   );
 }
