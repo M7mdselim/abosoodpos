@@ -354,23 +354,7 @@ export function POSScreen() {
                     : "bg-secondary text-secondary-foreground hover:bg-accent",
                 )}
               >
-                {c === "All"
-                  ? "الكل"
-                  : c === "Engine Oil"
-                  ? "زيت محرك"
-                  : c === "Oil Filter"
-                  ? "فلتر زيت"
-                  : c === "Air Filter"
-                  ? "فلتر هواء"
-                  : c === "Cabin Filter"
-                  ? "فلتر تكييف"
-                  : c === "Fuel Filter"
-                  ? "فلتر بنزين"
-                  : c === "Additives"
-                  ? "إضافات"
-                  : c === "Accessories"
-                  ? "إكسسوارات"
-                  : c}
+                {c === "All" ? "الكل" : c}
               </button>
             ))}
           </div>
@@ -468,13 +452,7 @@ export function POSScreen() {
                   </div>
                   <div className="flex items-end justify-between w-full mt-1">
                     <span className="rounded bg-secondary px-1.5 py-0.5 text-[9px] font-semibold text-secondary-foreground">
-                      {p.category === "Engine Oil"
-                        ? "زيت"
-                        : p.category === "Oil Filter"
-                        ? "فلتر زيت"
-                        : p.category === "Air Filter"
-                        ? "فلتر هواء"
-                        : p.category}
+                      {p.category}
                     </span>
                     <span className="text-base font-black text-primary">
                       {p.sellingPrice.toFixed(0)}

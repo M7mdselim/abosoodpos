@@ -221,21 +221,7 @@ function ProductsPage() {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1.5">
-                    <span>
-                      {p.category === "Engine Oil"
-                        ? "زيت محرك"
-                        : p.category === "Oil Filter"
-                        ? "فلتر زيت"
-                        : p.category === "Air Filter"
-                        ? "فلتر هواء"
-                        : p.category === "Cabin Filter"
-                        ? "فلتر تكييف"
-                        : p.category === "Fuel Filter"
-                        ? "فلتر بنزين"
-                        : p.category === "Additives"
-                        ? "إضافات"
-                        : p.category}
-                    </span>
+                    <span>{p.category}</span>
                     {(p.category === "Engine Oil" || p.category === "زيوت محركات") && p.oilMileage && (
                       <span className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded font-extrabold uppercase">
                         {p.oilMileage.toLocaleString()} KM
@@ -419,21 +405,7 @@ function ProductDialog({
                 <SelectContent>
                   {categories.map((c) => (
                     <SelectItem key={c} value={c}>
-                      {c === "Engine Oil"
-                        ? "زيت محرك"
-                        : c === "Oil Filter"
-                        ? "فلتر زيت"
-                        : c === "Air Filter"
-                        ? "فلتر هواء"
-                        : c === "Cabin Filter"
-                        ? "فلتر تكييف"
-                        : c === "Fuel Filter"
-                        ? "فلتر بنزين"
-                        : c === "Additives"
-                        ? "إضافات"
-                        : c === "Accessories"
-                        ? "إكسسوارات"
-                        : c}
+                      {c}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -651,30 +623,7 @@ function ManageCategoriesDialog({
                   </Button>
                 </div>
                 <span className="text-sm font-semibold text-foreground">
-                  {c === "Engine Oil"
-                    ? "زيت محرك"
-                    : c === "Oil Filter"
-                    ? "فلتر زيت"
-                    : c === "Air Filter"
-                    ? "فلتر هواء"
-                    : c === "Cabin Filter"
-                    ? "فلتر تكييف"
-                    : c === "Fuel Filter"
-                    ? "فلتر بنزين"
-                    : c === "Additives"
-                    ? "إضافات"
-                    : c === "Accessories"
-                    ? "إكسسوارات"
-                    : c}
-                  {c !== "Engine Oil" &&
-                    c !== "Oil Filter" &&
-                    c !== "Air Filter" &&
-                    c !== "Cabin Filter" &&
-                    c !== "Fuel Filter" &&
-                    c !== "Additives" &&
-                    c !== "Accessories" && (
-                      <span className="text-[10px] text-muted-foreground mr-1.5">(مخصص)</span>
-                    )}
+                  {c}
                 </span>
               </div>
             ))}
