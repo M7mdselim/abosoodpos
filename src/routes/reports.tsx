@@ -1,6 +1,8 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
-import { Printer, Download, FileSpreadsheet, FileText, CalendarDays, RefreshCw } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Printer, Download, FileSpreadsheet, FileText, CalendarDays, RefreshCw, Eye, Pencil } from "lucide-react";
+import { ReceiptViewDialog } from "./receipts";
+import type { Sale } from "@/types";
 
 import { PageShell } from "@/components/PageShell";
 import { Input } from "@/components/ui/input";
@@ -27,6 +29,13 @@ export const Route = createFileRoute("/reports")({
   beforeLoad: () => {
     if (!authService.isAuthenticated()) {
       throw redirect({ to: "/login" });
+    }
+    const session = authService.getSession();
+    const isAdminOrDev = session?.role === "admin" || session?.role === "developer";
+    const isAllowedCashier = session?.role === "cashier" && session?.permissions?.canViewReceipts === true;
+
+    if (!isAdminOrDev && !isAllowedCashier) {
+      throw redirect({ to: "/pos" });
     }
   },
   component: ReportsPage,
@@ -71,7 +80,8 @@ function ReportsPage() {
             visibility: hidden;
           }
           #printable-report-area, #printable-report-area *,
-          #shift-print-area, #shift-print-area * {
+          #shift-print-area, #shift-print-area *,
+          #receipt-print-only, #receipt-print-only * {
             visibility: visible;
           }
           #printable-report-area {
@@ -157,6 +167,7 @@ function ReportsPage() {
 function DailyReport() {
   const { session } = useSession();
   const [date, setDate] = useState(todayISO());
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   
   // Exclude voided sales defensively
   const allSales = useMemo(() => saleService.byDate(date), [date]);
@@ -277,6 +288,7 @@ function DailyReport() {
               <TableHead className="text-right">الكاشير</TableHead>
               <TableHead className="text-right">الدفع</TableHead>
               <TableHead className="text-left">الإجمالي</TableHead>
+              <TableHead className="text-left no-print">الإجراءات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -288,17 +300,28 @@ function DailyReport() {
                 <TableCell className="text-right">{s.cashierName}</TableCell>
                 <TableCell className="text-right">{s.paymentMethod === "Cash" ? "نقدي" : "فيزا"}</TableCell>
                 <TableCell className="text-left font-black text-primary">{formatCurrency(Number(s.total || 0))}</TableCell>
+                <TableCell className="text-left no-print">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1.5"
+                    onClick={() => setSelectedSale(s)}
+                  >
+                    <Eye className="h-3.5 w-3.5" /> عرض الفاتورة
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
             {sales.length > 0 && (
               <TableRow className="bg-muted/30 font-black border-t-2 border-slate-900 print:bg-slate-50">
                 <TableCell colSpan={5} className="text-right font-extrabold text-slate-800">إجمالي التقرير</TableCell>
                 <TableCell className="text-left text-slate-950 font-black">{formatCurrency(total)}</TableCell>
+                <TableCell className="no-print" />
               </TableRow>
             )}
             {sales.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-12 text-center text-muted-foreground font-semibold">
+                <TableCell colSpan={7} className="py-12 text-center text-muted-foreground font-semibold">
                   لا توجد عمليات مبيعات مسجلة في هذا التاريخ.
                 </TableCell>
               </TableRow>
@@ -330,6 +353,12 @@ function DailyReport() {
           <p className="text-muted-foreground">موافق / معتمد</p>
         </div>
       </div>
+
+      <ReceiptViewDialog
+        open={!!selectedSale}
+        onClose={() => setSelectedSale(null)}
+        sale={selectedSale}
+      />
     </div>
   );
 }
@@ -554,6 +583,7 @@ function StatCard({ label, value, highlight }: { label: string; value: string; h
 function ShiftsReport() {
   const { session } = useSession();
   const [printShift, setPrintShift] = useState<Shift | null>(null);
+  const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [tick, setTick] = useState(0);
 
   const shifts = useMemo(() => {
@@ -590,13 +620,13 @@ function ShiftsReport() {
               <TableHead className="text-right">الفعلي بالدرج</TableHead>
               <TableHead className="text-right">الفارق</TableHead>
               <TableHead className="text-right">الحالة</TableHead>
-              <TableHead className="text-center w-[100px]">طباعة الجرد</TableHead>
+              <TableHead className="text-center w-[150px]">الإجراءات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {shifts.map((s) => {
               const variance = s.actualCash !== undefined ? s.actualCash - s.expectedCash : null;
-              const canPrint = session?.role !== "cashier" || s.cashierId === session.id;
+              const canPrint = session?.role !== "cashier" || (s.cashierId === session.id && session?.permissions?.canPrintSpotCheck !== false);
 
               return (
                 <TableRow key={s.id} className="hover:bg-muted/10">
@@ -637,20 +667,33 @@ function ShiftsReport() {
                     </span>
                   </TableCell>
                   <TableCell className="text-center">
-                    {canPrint ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-amber-700 hover:text-amber-800 hover:bg-amber-500/10"
-                        onClick={() => setPrintShift(s)}
-                        title="طباعة جرد الوردية"
-                      >
-                        <Printer className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      "-"
-                    )}
+                    <div className="flex items-center justify-center gap-1.5 no-print">
+                      {canPrint && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-amber-700 hover:text-amber-800 hover:bg-amber-500/10"
+                          onClick={() => setPrintShift(s)}
+                          title="طباعة جرد الوردية"
+                        >
+                          <Printer className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {(session?.role === "admin" || session?.role === "developer") && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                          onClick={() => setEditingShift(s)}
+                          title="تعديل يوم الوردية"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {!canPrint && !(session?.role === "admin" || session?.role === "developer") && "-"}
+                    </div>
                   </TableCell>
                 </TableRow>
               );
@@ -670,6 +713,13 @@ function ShiftsReport() {
         open={!!printShift}
         onClose={() => setPrintShift(null)}
         shift={printShift}
+      />
+
+      <EditShiftDayDialog
+        open={!!editingShift}
+        onClose={() => setEditingShift(null)}
+        shift={editingShift}
+        onSaved={forceRefresh}
       />
     </div>
   );
@@ -790,6 +840,97 @@ function ShiftPrintDialog({
           <Button variant="ghost" size="sm" onClick={onClose}>إغلاق</Button>
           <Button size="sm" onClick={() => window.print()}>
             <Printer className="mr-1.5 h-3.5 w-3.5" /> طباعة
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface EditShiftDayDialogProps {
+  open: boolean;
+  onClose: () => void;
+  shift: Shift | null;
+  onSaved: () => void;
+}
+
+function EditShiftDayDialog({ open, onClose, shift, onSaved }: EditShiftDayDialogProps) {
+  const [newDay, setNewDay] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (shift) {
+      setNewDay(shift.shiftDay);
+    }
+  }, [shift]);
+
+  if (!shift) return null;
+
+  const handleSave = async () => {
+    const trimmed = newDay.trim();
+    if (!trimmed) {
+      toast.error("يرجى إدخال يوم الوردية");
+      return;
+    }
+    // Simple validation for YYYY-MM-DD
+    const regex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regex.test(trimmed)) {
+      toast.error("صيغة التاريخ غير صحيحة، يرجى استخدام YYYY-MM-DD");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await shiftService.updateShiftDay(shift.id, trimmed);
+      toast.success("تم تعديل يوم الوردية وجميع المعاملات المرتبطة بها بنجاح");
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "فشل تعديل يوم الوردية");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md p-4" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="text-base font-bold text-right">تعديل يوم الوردية</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 my-3 text-right">
+          <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 p-3 text-xs text-amber-800 dark:text-amber-300">
+            ⚠️ <b>تنبيه هام:</b> تعديل يوم الوردية سيقوم بنقل الوردية وتحديث تاريخ <b>جميع المبيعات والمعاملات المسجلة خلال هذه الوردية</b> تلقائياً في السحابة لتطابق اليوم الجديد والحفاظ على دقة التقارير.
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 text-xs border border-border p-2.5 rounded-lg bg-muted/20">
+            <div>
+              <span className="text-muted-foreground block">أمين الصندوق</span>
+              <span className="font-bold text-foreground">{shift.cashierName}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block">تاريخ البدء</span>
+              <span className="font-bold text-foreground font-mono">{formatDateTime(shift.startTime)}</span>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground">يوم الوردية الجديد (التاريخ)</label>
+            <Input
+              type="date"
+              value={newDay}
+              onChange={(e) => setNewDay(e.target.value)}
+              className="text-right font-mono"
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2 justify-start">
+          <Button variant="outline" onClick={onClose} disabled={saving}>إلغاء</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "جاري الحفظ..." : "حفظ التعديل"}
           </Button>
         </DialogFooter>
       </DialogContent>

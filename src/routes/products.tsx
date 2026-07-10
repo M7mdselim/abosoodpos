@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Search, Star, Package, AlertCircle, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Star, Package, AlertCircle, AlertTriangle, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageShell } from "@/components/PageShell";
@@ -49,17 +49,12 @@ export const Route = createFileRoute("/products")({
   component: ProductsPage,
 });
 
-const CATEGORIES: ProductCategory[] = [
-  "Engine Oil",
-  "Oil Filter",
-  "Air Filter",
-  "Cabin Filter",
-  "Fuel Filter",
-  "Additives",
-  "Accessories",
-];
+import { store } from "@/services/store";
 
 function ProductsPage() {
+  const [categories, setCategories] = useState<string[]>(() => store.categories);
+  const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
   const [query, setQuery] = useState("");
   const [tick, setTick] = useState(0);
   const [editing, setEditing] = useState<Product | null>(null);
@@ -93,9 +88,14 @@ function ProductsPage() {
       title="المنتجات والمخزن"
       subtitle={`${list.length} منتج مسجل بالكامل`}
       actions={
-        <Button size="lg" onClick={() => setCreating(true)}>
-          <Plus className="mr-2 h-5 w-5" /> إضافة منتج جديد
-        </Button>
+        <div className="flex gap-2">
+          <Button size="lg" variant="outline" onClick={() => setManageCategoriesOpen(true)}>
+            <Package className="mr-2 h-5 w-5" /> إدارة الأقسام
+          </Button>
+          <Button size="lg" onClick={() => setCreating(true)}>
+            <Plus className="mr-2 h-5 w-5" /> إضافة منتج جديد
+          </Button>
+        </div>
       }
     >
       {/* Analytics Cards */}
@@ -297,6 +297,16 @@ function ProductsPage() {
         product={editing}
         onSaved={refresh}
       />
+
+      <ManageCategoriesDialog
+        open={manageCategoriesOpen}
+        onClose={() => setManageCategoriesOpen(false)}
+        categories={categories}
+        onUpdate={(newCategories) => {
+          store.categories = newCategories;
+          setCategories(newCategories);
+        }}
+      />
     </PageShell>
   );
 }
@@ -325,6 +335,8 @@ function ProductDialog({
     isUnlimited: false,
     isActive: true,
   });
+
+  const categories = store.categories;
 
   useEffect(() => {
     if (product) {
@@ -405,7 +417,7 @@ function ProductDialog({
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((c) => (
+                  {categories.map((c) => (
                     <SelectItem key={c} value={c}>
                       {c === "Engine Oil"
                         ? "زيت محرك"
@@ -419,7 +431,9 @@ function ProductDialog({
                         ? "فلتر بنزين"
                         : c === "Additives"
                         ? "إضافات"
-                        : "إكسسوارات"}
+                        : c === "Accessories"
+                        ? "إكسسوارات"
+                        : c}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -519,6 +533,159 @@ function ProductDialog({
         <DialogFooter className="gap-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>إلغاء</Button>
           <Button onClick={save}>حفظ</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface ManageCategoriesDialogProps {
+  open: boolean;
+  onClose: () => void;
+  categories: string[];
+  onUpdate: (cats: string[]) => void;
+}
+
+function ManageCategoriesDialog({
+  open,
+  onClose,
+  categories,
+  onUpdate,
+}: ManageCategoriesDialogProps) {
+  const [newCat, setNewCat] = useState("");
+
+  const handleAdd = () => {
+    const trimmed = newCat.trim();
+    if (!trimmed) return;
+    if (categories.some((c) => c.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error("هذا القسم موجود بالفعل");
+      return;
+    }
+    const updated = [...categories, trimmed];
+    onUpdate(updated);
+    setNewCat("");
+    toast.success("تم إضافة القسم بنجاح");
+  };
+
+  const handleDelete = (catToDelete: string) => {
+    if (confirm(`هل أنت متأكد من حذف قسم "${catToDelete}"؟`)) {
+      const updated = categories.filter((c) => c !== catToDelete);
+      onUpdate(updated);
+      toast.success("تم حذف القسم بنجاح");
+    }
+  };
+
+  const moveUp = (index: number) => {
+    if (index === 0) return;
+    const updated = [...categories];
+    const temp = updated[index];
+    updated[index] = updated[index - 1];
+    updated[index - 1] = temp;
+    onUpdate(updated);
+  };
+
+  const moveDown = (index: number) => {
+    if (index === categories.length - 1) return;
+    const updated = [...categories];
+    const temp = updated[index];
+    updated[index] = updated[index + 1];
+    updated[index + 1] = temp;
+    onUpdate(updated);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md p-4">
+        <DialogHeader>
+          <DialogTitle className="text-base font-bold text-right">إدارة الأقسام (الفئات)</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 my-2 text-right">
+          {/* Add Category Form */}
+          <div className="flex gap-2">
+            <Button onClick={handleAdd}>إضافة قسم</Button>
+            <Input
+              placeholder="اسم القسم الجديد..."
+              value={newCat}
+              onChange={(e) => setNewCat(e.target.value)}
+              className="text-right"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAdd();
+              }}
+            />
+          </div>
+
+          {/* List of Categories */}
+          <div className="border border-border rounded-lg max-h-60 overflow-y-auto divide-y divide-border">
+            {categories.map((c, idx) => (
+              <div key={c} className="flex items-center justify-between p-2.5 hover:bg-muted/30">
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => handleDelete(c)}
+                    title="حذف القسم"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-muted"
+                    disabled={idx === 0}
+                    onClick={() => moveUp(idx)}
+                    title="تحريك لأعلى"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-muted"
+                    disabled={idx === categories.length - 1}
+                    onClick={() => moveDown(idx)}
+                    title="تحريك لأسفل"
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                </div>
+                <span className="text-sm font-semibold text-foreground">
+                  {c === "Engine Oil"
+                    ? "زيت محرك"
+                    : c === "Oil Filter"
+                    ? "فلتر زيت"
+                    : c === "Air Filter"
+                    ? "فلتر هواء"
+                    : c === "Cabin Filter"
+                    ? "فلتر تكييف"
+                    : c === "Fuel Filter"
+                    ? "فلتر بنزين"
+                    : c === "Additives"
+                    ? "إضافات"
+                    : c === "Accessories"
+                    ? "إكسسوارات"
+                    : c}
+                  {c !== "Engine Oil" &&
+                    c !== "Oil Filter" &&
+                    c !== "Air Filter" &&
+                    c !== "Cabin Filter" &&
+                    c !== "Fuel Filter" &&
+                    c !== "Additives" &&
+                    c !== "Accessories" && (
+                      <span className="text-[10px] text-muted-foreground mr-1.5">(مخصص)</span>
+                    )}
+                </span>
+              </div>
+            ))}
+            {categories.length === 0 && (
+              <div className="text-center py-6 text-xs text-muted-foreground">لا توجد أقسام مضافة</div>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>إغلاق</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

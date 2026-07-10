@@ -32,16 +32,12 @@ export async function initDb() {
     );
   `);
 
-  // Seed default users if empty
-  const usersCheck = await query("SELECT count(*) FROM users");
-  if (parseInt(usersCheck.rows[0].count) === 0) {
-    await query(`
-      INSERT INTO users (id, username, password, name, role, status) VALUES
-      ('u_dev', 'dev', 'dev', 'System Developer', 'developer', 'active'),
-      ('u_admin', 'admin', 'admin', 'Admin Manager', 'admin', 'active'),
-      ('u_cashier', 'cashier', 'cashier', 'Ahmed (Cashier)', 'cashier', 'active');
-    `);
-  }
+  await query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions JSONB;
+  `);
+
+  // Clean up any remaining mock users from the database
+  await query("DELETE FROM users WHERE id IN ('u_dev', 'u_admin', 'u_cashier')");
 
   // 2. Products table
   await query(`

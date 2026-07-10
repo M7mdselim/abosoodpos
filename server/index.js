@@ -16,7 +16,16 @@ app.use(express.urlencoded({ limit: "10mb", extended: true }));
 // Initialize Database on server start
 initDb().catch((err) => {
   console.error("Database initialization failed:", err);
-  fs.writeFileSync("server_error.log", `DB Init Error:\n${err.stack}\n`);
+  try {
+    fs.writeFileSync("server_error.log", `DB Init Error:\n${err.stack}\n`);
+  } catch (e) {
+    console.error("Could not write local log file, trying /tmp:", e);
+    try {
+      fs.writeFileSync("/tmp/server_error.log", `DB Init Error:\n${err.stack}\n`);
+    } catch (e2) {
+      console.error("Could not write /tmp log file:", e2);
+    }
+  }
 });
 
 // Helper: map snake_case postgres row to camelCase JS object
@@ -66,6 +75,59 @@ app.post("/api/auth/login", async (req, res) => {
     const user = mapKeys(result.rows[0], {});
     delete user.password; // Do not send password
     res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ----------------------------------------------------
+// 1.5. USERS ENDPOINTS
+// ----------------------------------------------------
+app.get("/api/users", async (req, res) => {
+  try {
+    const result = await query("SELECT * FROM users ORDER BY name ASC");
+    const users = result.rows.map((r) => mapKeys(r, {}));
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/users", async (req, res) => {
+  const { id, username, password, name, role, status, permissions } = req.body;
+  try {
+    await query(
+      `INSERT INTO users (id, username, password, name, role, status, permissions)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [id, username, password, name, role, status, permissions ? JSON.stringify(permissions) : null]
+    );
+    res.status(201).json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put("/api/users/:id", async (req, res) => {
+  const { id } = req.params;
+  const { username, password, name, role, status, permissions } = req.body;
+  try {
+    await query(
+      `UPDATE users
+       SET username = $1, password = $2, name = $3, role = $4, status = $5, permissions = $6
+       WHERE id = $7`,
+      [username, password, name, role, status, permissions ? JSON.stringify(permissions) : null, id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/users/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await query("DELETE FROM users WHERE id = $1", [id]);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -309,14 +371,19 @@ app.post("/api/shifts/open", async (req, res) => {
 });
 
 app.post("/api/shifts/close", async (req, res) => {
-  const { actualCash, notes, endTime } = req.body;
+  const { actualCash, notes, endTime, shiftId } = req.body;
   try {
-    // Find active shift
-    const active = await query("SELECT * FROM register_shifts WHERE status = 'open'");
-    if (active.rows.length === 0) {
+    let shift = null;
+    if (shiftId) {
+      const result = await query("SELECT * FROM register_shifts WHERE id = $1", [shiftId]);
+      shift = result.rows[0];
+    } else {
+      const active = await query("SELECT * FROM register_shifts WHERE status = 'open'");
+      shift = active.rows[0];
+    }
+    if (!shift) {
       return res.status(404).json({ error: "لا توجد وردية نشطة لإغلاقها" });
     }
-    const shift = active.rows[0];
     await query(
       `UPDATE register_shifts 
        SET status = 'closed', end_time = $1, actual_cash = $2, notes = $3 
@@ -324,6 +391,42 @@ app.post("/api/shifts/close", async (req, res) => {
       [endTime, actualCash, notes || "", shift.id]
     );
     invalidateCache("shifts");
+    invalidateCache("logs");
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put("/api/shifts/:id/day", async (req, res) => {
+  const { id } = req.params;
+  const { shiftDay } = req.body;
+  try {
+    // 1. Fetch shift
+    const result = await query("SELECT * FROM register_shifts WHERE id = $1", [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "الوردية غير موجودة" });
+    }
+    const shift = result.rows[0];
+
+    // 2. Update register_shifts table
+    await query(
+      "UPDATE register_shifts SET shift_day = $1 WHERE id = $2",
+      [shiftDay, id]
+    );
+
+    // 3. Update associated sales in sales table
+    await query(
+      `UPDATE sales 
+       SET shift_day = $1 
+       WHERE cashier_id = $2 
+         AND date >= $3 
+         AND ($4::varchar IS NULL OR date <= $4::varchar)`,
+      [shiftDay, shift.cashier_id, shift.start_time, shift.end_time || null]
+    );
+
+    invalidateCache("shifts");
+    invalidateCache("sales");
     invalidateCache("logs");
     res.json({ success: true });
   } catch (err) {
@@ -470,7 +573,10 @@ app.post("/api/sales", async (req, res) => {
     }
 
     // 3. Update Shift stats if active
-    const active = await query("SELECT * FROM register_shifts WHERE status = 'open'");
+    const active = await query(
+      "SELECT * FROM register_shifts WHERE status = 'open' AND cashier_id = $1",
+      [cashierId]
+    );
     if (active.rows.length > 0) {
       const activeShift = active.rows[0];
       const actualCash = cashAmount !== undefined && cashAmount !== null ? cashAmount : (paymentMethod === "Cash" ? total : 0);
@@ -519,6 +625,29 @@ app.post("/api/sales/:id/void", async (req, res) => {
       }
     }
 
+    // Update active shift stats if exists
+    const active = await query(
+      "SELECT * FROM register_shifts WHERE status = 'open' AND cashier_id = $1",
+      [sale.cashier_id]
+    );
+    if (active.rows.length > 0) {
+      const activeShift = active.rows[0];
+      const saleTotal = Number(sale.total);
+      const saleCash = sale.cash_amount !== null ? Number(sale.cash_amount) : (sale.payment_method === "Cash" ? saleTotal : 0);
+      const saleCard = sale.card_amount !== null ? Number(sale.card_amount) : (sale.payment_method === "Card" ? saleTotal : 0);
+
+      await query(
+        `UPDATE register_shifts 
+         SET sales_count = CASE WHEN sales_count > 0 THEN sales_count - 1 ELSE 0 END,
+             sales_total = CASE WHEN sales_total >= $1 THEN sales_total - $1 ELSE 0 END,
+             cash_sales_total = CASE WHEN cash_sales_total >= $2 THEN cash_sales_total - $2 ELSE 0 END,
+             card_sales_total = CASE WHEN card_sales_total >= $3 THEN card_sales_total - $3 ELSE 0 END,
+             expected_cash = CASE WHEN expected_cash >= $4 THEN expected_cash - $4 ELSE 0 END
+         WHERE id = $5`,
+        [saleTotal, saleCash, saleCard, saleCash, activeShift.id]
+      );
+    }
+
     invalidateCache("sales");
     invalidateCache("products");
     invalidateCache("shifts");
@@ -556,7 +685,10 @@ app.put("/api/sales/:id/payment", async (req, res) => {
     );
 
     // Update active shift financial balances
-    const active = await query("SELECT * FROM register_shifts WHERE status = 'open'");
+    const active = await query(
+      "SELECT * FROM register_shifts WHERE status = 'open' AND cashier_id = $1",
+      [sale.cashier_id]
+    );
     if (active.rows.length > 0) {
       const activeShift = active.rows[0];
       const cashDiff = newCash - oldCash;
@@ -670,6 +802,10 @@ app.post("/api/settings", async (req, res) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
-  console.log(`Server is running in production-ready mode on port ${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server is running in production-ready mode on port ${PORT}`);
+  });
+}
+
+export default app;

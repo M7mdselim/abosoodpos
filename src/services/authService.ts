@@ -1,4 +1,4 @@
-import type { UserRole } from "@/types";
+import type { UserRole, UserPermissions } from "@/types";
 import { userLogService } from "./userLogService";
 import { store } from "./store";
 
@@ -7,12 +7,7 @@ export interface SessionUser {
   name: string;
   role: UserRole;
   username: string;
-  permissions?: {
-    canDiscount: boolean;
-    canOpenShift: boolean;
-    canCloseShift: boolean;
-    canPrintSpotCheck: boolean;
-  };
+  permissions?: UserPermissions;
 }
 
 export const authService = {

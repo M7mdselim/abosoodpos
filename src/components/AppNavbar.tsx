@@ -193,10 +193,15 @@ export function AppNavbar() {
         {/* Horizontal Categorized Menus */}
         <nav className="hidden md:flex items-center gap-1">
           {categories.map((cat) => {
-            // Filter category items by user role
-            const visibleItems = cat.items.filter((item) =>
-              item.roles.includes(session.role)
-            );
+            // Filter category items by user role and permissions
+            const visibleItems = cat.items.filter((item) => {
+              if (item.to === "/receipts" || item.to === "/reports") {
+                return (
+                  session.role !== "cashier" || session.permissions?.canViewReceipts === true
+                );
+              }
+              return item.roles.includes(session.role);
+            });
 
             if (visibleItems.length === 0) return null;
 

@@ -21,16 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
-const CATEGORIES: (ProductCategory | "All")[] = [
-  "All",
-  "Engine Oil",
-  "Oil Filter",
-  "Air Filter",
-  "Cabin Filter",
-  "Fuel Filter",
-  "Additives",
-  "Accessories",
-];
+
 
 const QUICK_SERVICES = [
   { labelKey: "تغيير زيت", productIds: ["p1", "p11"] },
@@ -44,6 +35,7 @@ export function POSScreen() {
   const { session } = useSession();
   const { t } = useLanguage();
   const canMakeDiscount = session?.role !== "cashier" || session?.permissions?.canDiscount !== false;
+  const categoriesList = useMemo(() => ["All", ...store.categories], [store.categories]);
 
   const [activeShift, setActiveShift] = useState(() => shiftService.getActiveShift());
   const [openingCash, setOpeningCash] = useState("0");
@@ -200,8 +192,15 @@ export function POSScreen() {
       ];
     });
 
-    // Automatically open the cart when an item is added
-    setCartOpen(true);
+    // Automatically open the cart when an item is added (only on desktop to prevent blocking cashier on mobile)
+    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
+      setCartOpen(true);
+    } else {
+      toast.success(`تمت إضافة "${p.name}" إلى السلة`, {
+        position: "bottom-center",
+        duration: 1200,
+      });
+    }
   }
 
   function changeQty(productId: string, delta: number) {
@@ -329,9 +328,9 @@ export function POSScreen() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden relative">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] overflow-hidden relative">
       {/* LEFT: Products */}
-      <div className="flex flex-1 flex-col overflow-hidden border-r border-border relative">
+      <div className="flex flex-1 flex-col overflow-hidden border-r border-border relative w-full">
         <div className="border-b border-border bg-card px-4 py-3">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -343,13 +342,13 @@ export function POSScreen() {
             />
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {CATEGORIES.map((c) => (
+          <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-none snap-x snap-mandatory">
+            {categoriesList.map((c) => (
               <button
                 key={c}
                 onClick={() => setCategory(c)}
                 className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
+                  "snap-start shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
                   category === c
                     ? "bg-primary text-primary-foreground shadow"
                     : "bg-secondary text-secondary-foreground hover:bg-accent",
@@ -369,7 +368,9 @@ export function POSScreen() {
                   ? "فلتر بنزين"
                   : c === "Additives"
                   ? "إضافات"
-                  : "إكسسوارات"}
+                  : c === "Accessories"
+                  ? "إكسسوارات"
+                  : c}
               </button>
             ))}
           </div>
@@ -506,8 +507,10 @@ export function POSScreen() {
       {/* RIGHT: Invoice (Cart) */}
       <div
         className={cn(
-          "flex flex-col bg-card border-l border-border transition-all duration-300 ease-in-out overflow-hidden shrink-0",
-          cartOpen ? "w-full sm:w-[360px] md:w-[420px] lg:w-[460px]" : "w-0 border-l-0"
+          "flex flex-col bg-card transition-all duration-300 ease-in-out overflow-hidden shrink-0",
+          cartOpen
+            ? "fixed inset-0 z-40 w-full sm:w-[420px] md:w-[460px] lg:relative lg:inset-auto lg:z-0 lg:w-[460px] border-l border-border shadow-2xl lg:shadow-none"
+            : "hidden lg:flex lg:relative lg:inset-auto lg:w-0 lg:border-l-0"
         )}
       >
         {/* Customer section */}
@@ -816,14 +819,7 @@ export function POSScreen() {
             >
               <Trash2 className="h-3.5 w-3.5" /> مسح الفاتورة
             </button>
-            {lastSale && (
-              <button
-                onClick={() => setReceiptOpen(true)}
-                className="col-span-2 flex h-9 items-center justify-center gap-1 rounded-lg bg-secondary text-xs font-bold text-secondary-foreground hover:bg-accent mt-1"
-              >
-                <Printer className="h-3.5 w-3.5" /> إعادة طباعة الفاتورة الأخيرة
-              </button>
-            )}
+
           </div>
         </div>
       </div>
@@ -1082,8 +1078,8 @@ function ReceiptDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-sm p-4">
-          <DialogHeader className="pb-1">
+        <DialogContent className="w-[95vw] sm:max-w-sm p-4 max-h-[90vh] flex flex-col">
+          <DialogHeader className="pb-1 shrink-0">
             <DialogTitle className={cn(
               "flex items-center gap-2 text-sm",
               isDraft ? "text-blue-600" : "text-green-600"
@@ -1101,11 +1097,12 @@ function ReceiptDialog({
           </DialogHeader>
 
           {/* Screen receipt preview dialog container */}
-          <div 
-            id="receipt-print" 
-            dir="rtl"
-            className="rounded-md border border-border bg-white p-3 font-sans text-[11px] leading-normal text-black relative overflow-hidden"
-          >
+          <div className="flex-1 overflow-y-auto my-2 border border-border rounded-md bg-white">
+            <div 
+              id="receipt-print" 
+              dir="rtl"
+              className="p-3 font-sans text-[11px] leading-normal text-black relative overflow-hidden"
+            >
             {isDraft && (
               <>
                 <div className="absolute inset-0 flex items-center justify-center bg-white/[0.02] pointer-events-none z-10 select-none overflow-hidden">
@@ -1227,8 +1224,9 @@ function ReceiptDialog({
               شكراً لزيارتكم — رافقتكم السلامة!
             </div>
           </div>
+        </div>
 
-          <DialogFooter className="gap-1.5 mt-2">
+        <DialogFooter className="gap-1.5 mt-2 shrink-0">
             <Button 
               variant="ghost" 
               size="sm" 

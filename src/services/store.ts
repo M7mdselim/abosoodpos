@@ -1,7 +1,3 @@
-import { mockCustomers } from "@/mock-data/customers";
-import { mockProducts } from "@/mock-data/products";
-import { mockSales } from "@/mock-data/sales";
-import { mockUsers } from "@/mock-data/users";
 import type { Customer, Product, Sale, User } from "@/types";
 
 export interface AppSettings {
@@ -49,26 +45,32 @@ const setLocal = <T>(key: string, val: T): void => {
   }
 };
 
-let _customers = getLocal<Customer[]>("pos_customers", mockCustomers);
-let _products = getLocal<Product[]>("pos_products", mockProducts);
-let _sales = getLocal<Sale[]>("pos_sales", mockSales);
-let _users = getLocal<User[]>("pos_users", mockUsers).map((u) => {
-  const match = mockUsers.find((mu) => mu.id === u.id);
+let _customers = getLocal<Customer[]>("pos_customers", []);
+let _products = getLocal<Product[]>("pos_products", []);
+let _sales = getLocal<Sale[]>("pos_sales", []);
+let _users = getLocal<User[]>("pos_users", []).map((u) => {
   return {
     ...u,
-    username: u.username || match?.username || u.name.toLowerCase().replace(/[^a-z0-9]/g, "") || "user",
-    password: u.password || match?.password || "123",
+    username: u.username || "user",
+    password: u.password || "123",
     permissions: u.role === "cashier" 
-      ? (u.permissions || match?.permissions || {
-          canDiscount: true,
-          canOpenShift: true,
-          canCloseShift: true,
-          canPrintSpotCheck: true
-        }) 
+      ? {
+          canDiscount: u.permissions?.canDiscount ?? true,
+          canOpenShift: u.permissions?.canOpenShift ?? true,
+          canCloseShift: u.permissions?.canCloseShift ?? true,
+          canPrintSpotCheck: u.permissions?.canPrintSpotCheck ?? true,
+          canViewReceipts: u.permissions?.canViewReceipts ?? false,
+          canReprintReceipts: u.permissions?.canReprintReceipts ?? false,
+          canEditPaymentMethods: u.permissions?.canEditPaymentMethods ?? false,
+          canVoidReceipts: u.permissions?.canVoidReceipts ?? false,
+        }
       : undefined
   };
 });
 let _settings = getLocal<AppSettings>("pos_settings", DEFAULT_SETTINGS);
+
+const DEFAULT_CATEGORIES: string[] = [];
+let _categories = getLocal<string[]>("pos_categories", []);
 
 export function applyAppBranding(settings: AppSettings) {
   if (typeof window === "undefined") return;
@@ -119,8 +121,25 @@ export const store = {
     return _users;
   },
   set users(val: User[]) {
-    _users = val;
-    setLocal("pos_users", val);
+    const normalized = val.map((u) => ({
+      ...u,
+      username: u.username || "user",
+      password: u.password || "123",
+      permissions: u.role === "cashier" 
+        ? {
+            canDiscount: u.permissions?.canDiscount ?? true,
+            canOpenShift: u.permissions?.canOpenShift ?? true,
+            canCloseShift: u.permissions?.canCloseShift ?? true,
+            canPrintSpotCheck: u.permissions?.canPrintSpotCheck ?? true,
+            canViewReceipts: u.permissions?.canViewReceipts ?? false,
+            canReprintReceipts: u.permissions?.canReprintReceipts ?? false,
+            canEditPaymentMethods: u.permissions?.canEditPaymentMethods ?? false,
+            canVoidReceipts: u.permissions?.canVoidReceipts ?? false,
+          }
+        : undefined
+    }));
+    _users = normalized;
+    setLocal("pos_users", normalized);
   },
 
   get settings() {
@@ -132,11 +151,38 @@ export const store = {
     applyAppBranding(val);
   },
 
+  get categories() {
+    if (_categories && _categories.length > 0) {
+      return _categories;
+    }
+    return Array.from(new Set(this.products.map((p) => p.category).filter(Boolean)));
+  },
+  set categories(val: string[]) {
+    const isSame = JSON.stringify(_categories) === JSON.stringify(val);
+    _categories = val;
+    setLocal("pos_categories", val);
+    if (!isSame && typeof window !== "undefined") {
+      fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categories: val }),
+      }).catch((err) =>
+        console.error("Error saving categories to backend settings:", err)
+      );
+    }
+  },
+
+  setCategoriesFromSync(val: string[]) {
+    _categories = val;
+    setLocal("pos_categories", val);
+  },
+
   reset() {
-    this.customers = [...mockCustomers];
-    this.products = [...mockProducts];
-    this.sales = [...mockSales];
-    this.users = [...mockUsers];
+    this.customers = [];
+    this.products = [];
+    this.sales = [];
+    this.users = [];
+    this.categories = [...DEFAULT_CATEGORIES];
     this.settings = { ...DEFAULT_SETTINGS };
     localStorage.removeItem("app_shifts");
   },

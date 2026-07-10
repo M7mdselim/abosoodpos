@@ -138,7 +138,7 @@ export const shiftService = {
     active.notes = notes;
 
     this.saveShifts(shifts);
-    backendService.closeShift(actualCash, notes || "", active.endTime)
+    backendService.closeShift(active.id, actualCash, notes || "", active.endTime)
       .catch((err) => console.error("Error closing shift in backend:", err));
 
     // Log Action
@@ -173,5 +173,38 @@ export const shiftService = {
     active.cardSalesTotal += actualCard;
 
     this.saveShifts(shifts);
+  },
+
+  async updateShiftDay(shiftId: string, newShiftDay: string): Promise<void> {
+    const shifts = this.getShifts();
+    const index = shifts.findIndex((s) => s.id === shiftId);
+    if (index !== -1) {
+      const oldDay = shifts[index].shiftDay;
+      shifts[index].shiftDay = newShiftDay;
+      this.saveShifts(shifts);
+
+      // Call backend
+      const res = await fetch(`/api/shifts/${shiftId}/day`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shiftDay: newShiftDay }),
+      });
+      if (!res.ok) throw new Error("Failed to update shift day in backend");
+
+      // Sync backend to update sales and shifts in store
+      await backendService.syncFromBackend();
+
+      // Log Action
+      const session = authService.getSession();
+      if (session) {
+        userLogService.log(
+          session.id,
+          session.name,
+          session.role,
+          "تعديل يوم الوردية",
+          `تم تعديل يوم الوردية للوردية ${shifts[index].cashierName} من ${oldDay} إلى ${newShiftDay}.`
+        );
+      }
+    }
   },
 };

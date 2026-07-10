@@ -5,6 +5,10 @@ export interface UserPermissions {
   canOpenShift: boolean;
   canCloseShift: boolean;
   canPrintSpotCheck: boolean;
+  canViewReceipts?: boolean;
+  canReprintReceipts?: boolean;
+  canEditPaymentMethods?: boolean;
+  canVoidReceipts?: boolean;
 }
 
 export interface User {
@@ -17,14 +21,7 @@ export interface User {
   permissions?: UserPermissions;
 }
 
-export type ProductCategory =
-  | "Engine Oil"
-  | "Oil Filter"
-  | "Air Filter"
-  | "Cabin Filter"
-  | "Fuel Filter"
-  | "Additives"
-  | "Accessories";
+export type ProductCategory = string;
 
 export interface Product {
   id: string;

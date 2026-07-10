@@ -141,12 +141,18 @@ function UsersPage() {
                       <Badge 
                         variant="outline"
                         className={
-                          u.role === "admin" 
+                          u.role === "developer"
+                            ? "border-purple-500 bg-purple-50/50 text-purple-700 font-bold dark:bg-purple-950/20"
+                            : u.role === "admin" 
                             ? "border-blue-500 bg-blue-50/50 text-blue-700 font-bold dark:bg-blue-950/20" 
                             : "border-emerald-500 bg-emerald-50/50 text-emerald-700 font-bold dark:bg-emerald-950/20"
                         }
                       >
-                        {u.role === "admin" ? "مدير نظام (Admin)" : "كاشير (Cashier)"}
+                        {u.role === "developer" 
+                          ? "مطور النظام (Developer)" 
+                          : u.role === "admin" 
+                          ? "مدير نظام (Admin)" 
+                          : "كاشير (Cashier)"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -173,10 +179,14 @@ function UsersPage() {
                           {u.permissions?.canOpenShift && <Badge variant="secondary" className="text-[10px]">فتح وردية</Badge>}
                           {u.permissions?.canCloseShift && <Badge variant="secondary" className="text-[10px]">إغلاق وردية</Badge>}
                           {u.permissions?.canPrintSpotCheck && <Badge variant="secondary" className="text-[10px]">جرد الوردية</Badge>}
+                          {u.permissions?.canViewReceipts && <Badge variant="secondary" className="text-[10px]">عرض الفواتير</Badge>}
+                          {u.permissions?.canReprintReceipts && <Badge variant="secondary" className="text-[10px]">إعادة الطباعة</Badge>}
                           {!u.permissions?.canDiscount && 
                            !u.permissions?.canOpenShift && 
                            !u.permissions?.canCloseShift && 
-                           !u.permissions?.canPrintSpotCheck && (
+                           !u.permissions?.canPrintSpotCheck &&
+                           !u.permissions?.canViewReceipts &&
+                           !u.permissions?.canReprintReceipts && (
                              <span className="text-red-500 font-semibold">ممنوع من كل الصلاحيات</span>
                            )}
                         </div>
@@ -243,6 +253,10 @@ function UserFormDialog({
   const [canOpenShift, setCanOpenShift] = useState(true);
   const [canCloseShift, setCanCloseShift] = useState(true);
   const [canPrintSpotCheck, setCanPrintSpotCheck] = useState(true);
+  const [canViewReceipts, setCanViewReceipts] = useState(false);
+  const [canReprintReceipts, setCanReprintReceipts] = useState(false);
+  const [canEditPaymentMethods, setCanEditPaymentMethods] = useState(false);
+  const [canVoidReceipts, setCanVoidReceipts] = useState(false);
 
   // Sync state when dialog opens or user changes
   useMemo(() => {
@@ -257,6 +271,10 @@ function UserFormDialog({
         setCanOpenShift(user.permissions?.canOpenShift ?? true);
         setCanCloseShift(user.permissions?.canCloseShift ?? true);
         setCanPrintSpotCheck(user.permissions?.canPrintSpotCheck ?? true);
+        setCanViewReceipts(user.permissions?.canViewReceipts ?? false);
+        setCanReprintReceipts(user.permissions?.canReprintReceipts ?? false);
+        setCanEditPaymentMethods(user.permissions?.canEditPaymentMethods ?? false);
+        setCanVoidReceipts(user.permissions?.canVoidReceipts ?? false);
       } else {
         setName("");
         setUsername("");
@@ -267,6 +285,10 @@ function UserFormDialog({
         setCanOpenShift(true);
         setCanCloseShift(true);
         setCanPrintSpotCheck(true);
+        setCanViewReceipts(false);
+        setCanReprintReceipts(false);
+        setCanEditPaymentMethods(false);
+        setCanVoidReceipts(false);
       }
     }
   }, [open, user]);
@@ -290,6 +312,10 @@ function UserFormDialog({
       canOpenShift,
       canCloseShift,
       canPrintSpotCheck,
+      canViewReceipts,
+      canReprintReceipts,
+      canEditPaymentMethods,
+      canVoidReceipts,
     };
 
     if (isEdit && user) {
@@ -374,6 +400,7 @@ function UserFormDialog({
               <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
                 <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="developer">مطور النظام (Developer)</SelectItem>
                   <SelectItem value="admin">مدير نظام (Admin)</SelectItem>
                   <SelectItem value="cashier">كاشير / موظف (Cashier)</SelectItem>
                 </SelectContent>
@@ -441,6 +468,50 @@ function UserFormDialog({
                   />
                   <label htmlFor="perm_close" className="font-semibold cursor-pointer select-none">
                     السماح بإغلاق وإنهاء الوردية
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox 
+                    id="perm_view_receipts" 
+                    checked={canViewReceipts} 
+                    onCheckedChange={(checked) => setCanViewReceipts(!!checked)}
+                  />
+                  <label htmlFor="perm_view_receipts" className="font-semibold cursor-pointer select-none">
+                    عرض صفحة فواتير المبيعات والتقارير
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox 
+                    id="perm_reprint" 
+                    checked={canReprintReceipts} 
+                    onCheckedChange={(checked) => setCanReprintReceipts(!!checked)}
+                  />
+                  <label htmlFor="perm_reprint" className="font-semibold cursor-pointer select-none">
+                    إعادة طباعة البونات/الفواتير
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox 
+                    id="perm_edit_payment" 
+                    checked={canEditPaymentMethods} 
+                    onCheckedChange={(checked) => setCanEditPaymentMethods(!!checked)}
+                  />
+                  <label htmlFor="perm_edit_payment" className="font-semibold cursor-pointer select-none">
+                    السماح بتعديل طريقة دفع الفاتورة
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox 
+                    id="perm_void" 
+                    checked={canVoidReceipts} 
+                    onCheckedChange={(checked) => setCanVoidReceipts(!!checked)}
+                  />
+                  <label htmlFor="perm_void" className="font-semibold cursor-pointer select-none">
+                    السماح بإلغاء الفواتير وإرجاع المخزن
                   </label>
                 </div>
               </div>

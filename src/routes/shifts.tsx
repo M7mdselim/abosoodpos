@@ -503,6 +503,32 @@ function ShiftPrintDialog({
   const actualCash = shift.actualCash !== null && shift.actualCash !== undefined ? Number(shift.actualCash) : null;
   const variance = actualCash !== null ? actualCash - expectedCash : null;
 
+  // Get all active sales for this shift to show in spot check
+  const shiftSales = store.sales.filter(
+    (s) => s.shiftDay === shift.shiftDay && s.cashierId === shift.cashierId && s.status === "active"
+  );
+
+  const itemsMap = new Map<string, { name: string; brand: string; qty: number; unitPrice: number; total: number }>();
+  shiftSales.forEach((sale) => {
+    sale.items.forEach((item) => {
+      const key = item.productId;
+      if (itemsMap.has(key)) {
+        const existing = itemsMap.get(key)!;
+        existing.qty += item.quantity;
+        existing.total += item.unitPrice * item.quantity;
+      } else {
+        itemsMap.set(key, {
+          name: item.name,
+          brand: item.brand,
+          qty: item.quantity,
+          unitPrice: item.unitPrice,
+          total: item.unitPrice * item.quantity,
+        });
+      }
+    });
+  });
+  const aggregatedItems = Array.from(itemsMap.values());
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-sm p-4">
@@ -599,6 +625,35 @@ function ShiftPrintDialog({
               </>
             )}
           </div>
+
+          {/* Aggregated Sold Items */}
+          <div className="border-t border-dashed border-black/50 my-1.5" />
+          <div className="text-[10px] font-bold mb-1">📦 المنتجات المباعة في الوردية:</div>
+          {aggregatedItems.length === 0 ? (
+            <div className="text-[9px] text-black/50 text-center py-1">لا توجد مبيعات</div>
+          ) : (
+            <table className="w-full text-[9px] border-collapse mb-1">
+              <thead>
+                <tr className="border-b border-black/30">
+                  <th className="text-right py-0.5 font-bold">المنتج</th>
+                  <th className="text-center py-0.5 font-bold w-8">الكمية</th>
+                  <th className="text-right py-0.5 font-bold">الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody>
+                {aggregatedItems.map((item, i) => (
+                  <tr key={i} className="border-b border-black/10">
+                    <td className="py-0.5 leading-tight text-right">
+                      <div>{item.name}</div>
+                      <div className="text-[8px] text-black/50">{item.brand}</div>
+                    </td>
+                    <td className="text-center py-0.5 font-bold">{item.qty}</td>
+                    <td className="text-right py-0.5 font-semibold">{formatCurrency(item.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
 
           {shift.notes && (
             <>

@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { saleService } from "@/services/saleService";
 import { authService } from "@/services/authService";
+import { shiftService } from "@/services/shiftService";
 import { useSession } from "@/context/RoleContext";
 import { store } from "@/services/store";
 import { formatCurrency, formatDateTime } from "@/utils/format";
@@ -32,7 +33,10 @@ export const Route = createFileRoute("/receipts")({
       throw redirect({ to: "/login" });
     }
     const session = authService.getSession();
-    if (session?.role !== "admin" && session?.role !== "developer") {
+    const isAdminOrDev = session?.role === "admin" || session?.role === "developer";
+    const isAllowedCashier = session?.role === "cashier" && session?.permissions?.canViewReceipts === true;
+
+    if (!isAdminOrDev && !isAllowedCashier) {
       throw redirect({ to: "/pos" });
     }
   },
@@ -40,6 +44,7 @@ export const Route = createFileRoute("/receipts")({
 });
 
 function ReceiptsPage() {
+  const { session } = useSession();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "voided">("all");
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
@@ -52,6 +57,22 @@ function ReceiptsPage() {
   const sales = useMemo(() => {
     let list = saleService.list();
     
+    // Cashier filter: only see their own shift receipts
+    if (session?.role === "cashier") {
+      const activeShift = shiftService.getActiveShift();
+      if (activeShift && activeShift.cashierId === session.id) {
+        list = list.filter((s) => s.cashierId === session.id && s.shiftDay === activeShift.shiftDay);
+      } else {
+        const cashierShifts = shiftService.getShifts().filter((sh) => sh.cashierId === session.id);
+        const lastShiftDay = cashierShifts[0]?.shiftDay;
+        if (lastShiftDay) {
+          list = list.filter((s) => s.cashierId === session.id && s.shiftDay === lastShiftDay);
+        } else {
+          list = list.filter((s) => s.cashierId === session.id);
+        }
+      }
+    }
+
     // Search filter
     if (query.trim()) {
       const q = query.trim().toLowerCase();
@@ -72,7 +93,7 @@ function ReceiptsPage() {
     }
 
     return list;
-  }, [query, statusFilter, tick]);
+  }, [query, statusFilter, session, tick]);
 
   // Reset page when search or status filters change
   useEffect(() => {
@@ -177,7 +198,7 @@ function ReceiptsPage() {
                       >
                         <Eye className="mr-1 h-4 w-4" /> عرض
                       </Button>
-                      {!isVoided && (
+                      {!isVoided && (session?.role === "admin" || session?.role === "developer" || session?.permissions?.canVoidReceipts === true) && (
                         <Button
                           size="sm"
                           variant="destructive"
@@ -266,7 +287,7 @@ function ReceiptsPage() {
   );
 }
 
-function ReceiptViewDialog({
+export function ReceiptViewDialog({
   open,
   onClose,
   sale,
@@ -316,6 +337,11 @@ function ReceiptViewDialog({
                   </div>
                 </div>
               )}
+              
+              {/* Copy Indicator */}
+              <div className="text-center font-black text-xs border border-black py-1.5 mb-3 rounded uppercase tracking-wider bg-black/5 text-black">
+                *** نسخة — COPY ***
+              </div>
               
               <div className="text-center mb-1">
                 {settings.logoUrl && (
@@ -434,7 +460,7 @@ function ReceiptViewDialog({
             </div>
             
             {/* Admin/Cashier Edit Payment Method Section */}
-            {(session?.role === "admin" || session?.role === "developer" || (session?.role === "cashier" && sale.cashierId === session.id)) && !isEditing && (
+            {(session?.role === "admin" || session?.role === "developer" || session?.permissions?.canEditPaymentMethods === true) && !isEditing && (
               <div className="mt-4 p-3 rounded-lg border border-dashed border-primary/30 bg-primary/5 flex items-center justify-between gap-2 text-right">
                 <div className="flex flex-col">
                   <span className="font-bold text-xs text-primary">تعديل طريقة الدفع</span>
@@ -555,9 +581,11 @@ function ReceiptViewDialog({
 
             <DialogFooter className="gap-1.5 mt-3">
               <Button variant="ghost" size="sm" onClick={onClose}>إغلاق</Button>
-              <Button size="sm" onClick={() => window.print()}>
-                <Printer className="mr-1.5 h-3.5 w-3.5" /> طباعة
-              </Button>
+              {(session?.role !== "cashier" || session?.permissions?.canReprintReceipts === true) && (
+                <Button size="sm" onClick={() => window.print()}>
+                  <Printer className="mr-1.5 h-3.5 w-3.5" /> طباعة
+                </Button>
+              )}
             </DialogFooter>
           </div>
         </DialogContent>
@@ -638,6 +666,11 @@ function ReceiptViewDialog({
               </div>
             </div>
           )}
+          
+          {/* Copy Indicator */}
+          <div className="text-center font-black text-xs border border-black py-1.5 mb-3 rounded uppercase tracking-wider bg-black/5 text-black">
+            *** نسخة — COPY ***
+          </div>
           
           {/* Header */}
           <div className="text-center mb-1">

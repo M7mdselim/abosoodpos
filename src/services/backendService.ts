@@ -1,5 +1,5 @@
 import { store } from "./store";
-import type { Customer, Product, Sale } from "@/types";
+import type { Customer, Product, Sale, User } from "@/types";
 import type { Shift } from "./shiftService";
 import type { UserLogEntry } from "./userLogService";
 
@@ -36,6 +36,9 @@ export const backendService = {
       const settings = await settingsRes.json();
       if (settings && Object.keys(settings).length > 0) {
         store.settings = { ...store.settings, ...settings };
+        if (settings.categories && Array.isArray(settings.categories)) {
+          store.setCategoriesFromSync(settings.categories);
+        }
       }
 
       // 5. Sync Shifts
@@ -52,6 +55,37 @@ export const backendService = {
       const logs = await logsRes.json();
       if (logs) {
         localStorage.setItem("app_user_logs", JSON.stringify(logs));
+      }
+
+      // 7. Sync Users
+      const usersRes = await fetch("/api/users");
+      if (!usersRes.ok) throw new Error(`Users sync: ${usersRes.status}`);
+      const users = await usersRes.json();
+      if (users && users.length > 0) {
+        store.users = users;
+      }
+
+      // Automatically refresh active session if current user details/permissions changed
+      if (typeof window !== "undefined") {
+        const storedSession = localStorage.getItem("app_session");
+        if (storedSession && users) {
+          try {
+            const currentSession = JSON.parse(storedSession);
+            const updatedMe = users.find((u: any) => u.id === currentSession.id);
+            if (updatedMe) {
+              const newSession = {
+                ...currentSession,
+                name: updatedMe.name,
+                role: updatedMe.role,
+                username: updatedMe.username,
+                permissions: updatedMe.permissions,
+              };
+              localStorage.setItem("app_session", JSON.stringify(newSession));
+            }
+          } catch (e) {
+            console.error("Error updating active session on sync:", e);
+          }
+        }
       }
     } catch (error) {
       console.error("Error during backend synchronization:", error);
@@ -136,11 +170,11 @@ export const backendService = {
     });
   },
 
-  async closeShift(actualCash: number, notes: string, endTime: string): Promise<void> {
+  async closeShift(shiftId: string, actualCash: number, notes: string, endTime: string): Promise<void> {
     await fetch("/api/shifts/close", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ actualCash, notes, endTime }),
+      body: JSON.stringify({ shiftId, actualCash, notes, endTime }),
     });
   },
 
@@ -165,6 +199,29 @@ export const backendService = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(settings),
+    });
+  },
+
+  // Users
+  async createUser(user: User): Promise<void> {
+    await fetch("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(user),
+    });
+  },
+
+  async updateUser(id: string, user: User): Promise<void> {
+    await fetch(`/api/users/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(user),
+    });
+  },
+
+  async deleteUser(id: string): Promise<void> {
+    await fetch(`/api/users/${id}`, {
+      method: "DELETE",
     });
   },
 };
