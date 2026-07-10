@@ -178,16 +178,8 @@ export function AppNavbar() {
   return (
     <>
       <header className="h-16 w-full shrink-0 border-b border-border bg-background px-6 flex items-center justify-between shadow-sm z-30 sticky top-0">
-      {/* Left side: Hamburger Button (mobile) + Logo & Brand + Categorized Horizontal Menu */}
-      <div className="flex items-center gap-4 md:gap-8">
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="flex md:hidden items-center justify-center p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none transition-colors"
-          aria-label="Toggle Menu"
-        >
-          <Menu className="h-6 w-6" />
-        </button>
-
+      {/* Left side: Logo & Brand + Categorized Horizontal Menu */}
+      <div className="flex items-center gap-8">
         <Link to="/pos" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
           {settings.logoUrl ? (
             <img src={settings.logoUrl} alt="Logo" className="h-9 w-9 object-cover rounded-full shadow-sm border border-border bg-white" />
@@ -307,14 +299,23 @@ export function AppNavbar() {
           </div>
         </div>
 
-        {/* Logout button */}
+        {/* Logout button - desktop only */}
         <button
           onClick={handleLogout}
-          className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors"
+          className="hidden md:flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors"
           title="Sign Out"
         >
           <LogOut className="h-4 w-4" />
-          <span className="hidden sm:inline">Sign Out</span>
+          <span>Sign Out</span>
+        </button>
+
+        {/* Hamburger button - mobile only */}
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="flex md:hidden items-center justify-center p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none transition-colors"
+          aria-label="Toggle Menu"
+        >
+          <Menu className="h-6 w-6" />
         </button>
       </div>
     </header>
