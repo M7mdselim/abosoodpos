@@ -117,14 +117,14 @@ const categories: NavCategory[] = [
       {
         to: "/settings",
         label: "Settings",
-        description: "Configure receipt printer dimensions and print layouts.",
+        description: "Manage product categories and car brands.",
         icon: Settings,
         roles: ["developer", "admin"],
       },
       {
         to: "/developer",
         label: "Developer",
-        description: "Database seeding and developer settings.",
+        description: "Configure receipt printer layouts, database seeding, and feature flags.",
         icon: Terminal,
         roles: ["developer"],
       },

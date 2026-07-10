@@ -1,5 +1,6 @@
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useSession } from "@/context/RoleContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { authService } from "@/services/authService";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import {
   Database,
@@ -21,6 +23,10 @@ import {
   ShieldAlert,
   Code2,
   Building2,
+  Printer,
+  Sliders,
+  Eye,
+  Wrench,
 } from "lucide-react";
 
 export const Route = createFileRoute("/developer")({
@@ -172,7 +178,69 @@ function DeveloperControlsPage() {
     toast.success(
       language === "ar" ? "تم حفظ إعدادات الهوية بنجاح وتحديث النظام" : "Identity settings saved successfully!"
     );
+  };
+
+  // Receipt Printer & Page Layout state
+  const [receiptWidth, setReceiptWidth] = useState(currentSettings.receiptWidth || 80);
+  const [receiptMargin, setReceiptMargin] = useState(currentSettings.receiptMargin !== undefined ? currentSettings.receiptMargin : 4);
+  const [receiptFontSize, setReceiptFontSize] = useState(currentSettings.receiptFontSize || 11);
+
+  const handleSavePrinterSettings = () => {
+    const updated = {
+      ...currentSettings,
+      receiptWidth,
+      receiptMargin,
+      receiptFontSize,
+    };
+    store.settings = updated;
+    backendService.saveSettings(updated).catch((err) => console.error("Error saving printer settings in backend:", err));
+    toast.success(
+      language === "ar" ? "تم حفظ إعدادات الطابعة بنجاح وتحديث النظام" : "Receipt printer settings saved successfully!"
+    );
     router.invalidate();
+  };
+
+  const handleApplyPreset = (width: number, margin: number, fontSize: number) => {
+    setReceiptWidth(width);
+    setReceiptMargin(margin);
+    setReceiptFontSize(fontSize);
+    toast.success(
+      language === "ar"
+        ? `تم تطبيق الإعداد المسبق: عرض ${width}مم`
+        : `Applied preset for ${width}mm width`
+    );
+  };
+
+  const handleResetPrinterSettings = () => {
+    setReceiptWidth(80);
+    setReceiptMargin(4);
+    setReceiptFontSize(11);
+    toast.success(
+      language === "ar" ? "تمت إعادة تعيين الإعدادات الافتراضية للطباعة" : "Reset printer defaults successfully"
+    );
+  };
+
+  // Mock sale data for the receipt preview
+  const mockPreviewSale = {
+    invoiceNumber: "20269999",
+    date: new Date(),
+    cashierName: session?.username || "الكاشير",
+    customerName: "محمد سليم (تجريبي)",
+    customerPhone: "01021111666",
+    carBrand: "تويوتا",
+    carModel: "كامري",
+    km: 145000,
+    items: [
+      { productId: "p1", name: "زيت تويوتا الأصلي 5W-30 (4L)", quantity: 1, unitPrice: 150 },
+      { productId: "p2", name: "فلتر زيت ممتاز", quantity: 1, unitPrice: 45 },
+    ],
+    subtotal: 195,
+    discount: 0,
+    vat: 27.3,
+    total: 222.3,
+    paymentMethod: "Cash",
+    oilUsed: "Toyota 5W-30",
+    oilMileage: 10000,
   };
 
   if (!isDeveloper) {
@@ -389,6 +457,302 @@ function DeveloperControlsPage() {
           </CardContent>
         </Card>
 
+        {/* Printer & Receipt Settings Section */}
+        <Card className="border-primary/25 shadow-sm bg-card md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center gap-2 text-base">
+              <Printer className="h-5 w-5 text-primary" />
+              {language === "ar" ? "أبعاد الورق وحجم الخط للطباعة" : "Paper Dimensions & Font Size"}
+            </CardTitle>
+            <CardDescription>
+              {language === "ar"
+                ? "تخصيص عرض الورق، الهوامش وحجم الخط ليلائم طابعتك الحرارية ومراجعة الشكل النهائي للإيصال."
+                : "Customize thermal roll width, padding spacing, and font sizes to fit your receipt printer."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-5 items-start">
+              {/* Left Control Panel: Columns 1-3 */}
+              <div className="md:col-span-3 space-y-6">
+                <div className="space-y-4">
+                  {/* Presets */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold text-muted-foreground">
+                      {language === "ar" ? "إعدادات جاهزة سريعة" : "Quick Presets"}
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleApplyPreset(80, 4, 11)}
+                        className="text-xs font-semibold"
+                      >
+                        80mm (Standard)
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleApplyPreset(58, 2, 9.5)}
+                        className="text-xs font-semibold"
+                      >
+                        58mm (Compact Mobile)
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleApplyPreset(110, 6, 12)}
+                        className="text-xs font-semibold"
+                      >
+                        110mm (Wide Desktop)
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="my-2 border-t border-border" />
+
+                  {/* Width Slider */}
+                  <div className="space-y-2 text-left">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-muted-foreground">
+                        {language === "ar" ? "عرض الورق" : "Receipt Width"}
+                      </span>
+                      <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                        {receiptWidth}mm
+                      </span>
+                    </div>
+                    <Slider
+                      value={[receiptWidth]}
+                      onValueChange={(val) => setReceiptWidth(val[0])}
+                      min={40}
+                      max={120}
+                      step={1}
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      {language === "ar"
+                        ? "عرض بكرة الورق الحراري المطبوع. القيمة القياسية هي 80 مم أو 58 مم."
+                        : "The width of physical paper roll. Standard values are 80mm or 58mm."}
+                    </p>
+                  </div>
+
+                  {/* Margin Slider */}
+                  <div className="space-y-2 text-left">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-muted-foreground">
+                        {language === "ar" ? "الهوامش الجانبية" : "Horizontal Margins"}
+                      </span>
+                      <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                        {receiptMargin}mm
+                      </span>
+                    </div>
+                    <Slider
+                      value={[receiptMargin]}
+                      onValueChange={(val) => setReceiptMargin(val[0])}
+                      min={0}
+                      max={20}
+                      step={1}
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      {language === "ar"
+                        ? "المسافة الفارغة على الجانبين لتفادي اقتطاع النصوص في طابعات معينة."
+                        : "Space on both sides of the printout to prevent text clipping."}
+                    </p>
+                  </div>
+
+                  {/* Font Size Slider */}
+                  <div className="space-y-2 text-left">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-muted-foreground">
+                        {language === "ar" ? "حجم الخط الافتراضي" : "Default Font Size"}
+                      </span>
+                      <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                        {receiptFontSize}px
+                      </span>
+                    </div>
+                    <Slider
+                      value={[receiptFontSize]}
+                      onValueChange={(val) => setReceiptFontSize(val[0])}
+                      min={8}
+                      max={20}
+                      step={0.5}
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      {language === "ar"
+                        ? "حجم خط المحتوى الإجمالي للفاتورة وتفاصيل المنتجات."
+                        : "Baseline size for receipt textual content and line items."}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSavePrinterSettings}
+                    className="flex-1 bg-primary text-primary-foreground font-semibold shadow hover:bg-primary/90 h-11"
+                  >
+                    {language === "ar" ? "حفظ إعدادات الأبعاد" : "Save Layout Settings"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleResetPrinterSettings}
+                    className="h-11 px-4 text-xs font-bold"
+                  >
+                    {language === "ar" ? "إعادة افتراضي" : "Reset Defaults"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Right Live Preview: Columns 2 */}
+              <div className="md:col-span-2 space-y-4">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+                  <Eye className="h-4 w-4 text-primary" />
+                  <span>{language === "ar" ? "معاينة حية للمقاسات الحالية" : "Live Layout Preview"}</span>
+                </div>
+                <div className="w-full bg-muted border border-dashed border-border rounded-xl p-4 flex justify-center items-start overflow-x-auto min-h-[480px]">
+                  <div
+                    className="bg-white text-black p-3 shadow-md rounded border border-border transition-all duration-300"
+                    style={{
+                      width: `${receiptWidth * 3.8}px`,
+                      paddingLeft: `${receiptMargin * 3.8}px`,
+                      paddingRight: `${receiptMargin * 3.8}px`,
+                    }}
+                    dir="rtl"
+                  >
+                    {/* Header */}
+                    <div className="text-center mb-1">
+                      {currentSettings.logoUrl && (
+                        <img
+                          src={currentSettings.logoUrl}
+                          alt="Logo"
+                          className="w-10 h-10 rounded-full object-cover mx-auto mb-1 border border-border bg-white"
+                        />
+                      )}
+                      <div className="font-black text-black leading-tight" style={{ fontSize: `${receiptFontSize * 1.2}px` }}>
+                        {currentSettings.companyNameAr}
+                      </div>
+                      <div className="font-semibold text-black/80" style={{ fontSize: `${receiptFontSize * 0.9}px` }}>
+                        {currentSettings.sloganAr}
+                      </div>
+                      <div className="text-black/70 font-medium" style={{ fontSize: `${receiptFontSize * 0.8}px` }}>
+                        {currentSettings.phone && `ت: ${currentSettings.phone}`}
+                        {currentSettings.phone && currentSettings.address && " | "}
+                        {currentSettings.address && `${currentSettings.address}`}
+                      </div>
+                    </div>
+
+                    <div className="my-1.5 border-t border-dashed border-black" />
+
+                    {/* Metadata */}
+                    <div className="grid grid-cols-2 gap-y-0.5 text-black" style={{ fontSize: `${receiptFontSize * 0.8}px` }}>
+                      <div><b>رقم الفاتورة:</b></div>
+                      <div className="text-left font-bold">#20269999</div>
+                      <div><b>التاريخ والوقت:</b></div>
+                      <div className="text-left">
+                        {mockPreviewSale.date.toLocaleDateString("ar-EG")} {mockPreviewSale.date.toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                      <div><b>أمين الصندوق:</b></div>
+                      <div className="text-left">{mockPreviewSale.cashierName}</div>
+                    </div>
+
+                    <div className="my-1.5 border-t border-dashed border-black" />
+
+                    {/* Customer */}
+                    <div
+                      className="text-right leading-tight space-y-0.5 bg-black/[0.01] p-1 border border-dashed border-black rounded"
+                      style={{ fontSize: `${receiptFontSize * 0.8}px` }}
+                    >
+                      <div><b>العميل:</b> {mockPreviewSale.customerName}</div>
+                      <div><b>الهاتف:</b> {mockPreviewSale.customerPhone}</div>
+                      <div><b>السيارة:</b> {mockPreviewSale.carBrand} {mockPreviewSale.carModel} — {mockPreviewSale.km.toLocaleString()} كم</div>
+                    </div>
+
+                    <div className="my-1.5 border-t border-dashed border-black" />
+
+                    {/* Product Items Table */}
+                    <table className="w-full text-black border-collapse" style={{ fontSize: `${receiptFontSize * 0.8}px` }}>
+                      <thead>
+                        <tr className="border-b border-black text-right font-bold">
+                          <th className="py-0.5 text-right w-[45%]">البند</th>
+                          <th className="py-0.5 text-center w-[15%]">الكمية</th>
+                          <th className="py-0.5 text-left w-[20%]">السعر</th>
+                          <th className="py-0.5 text-left w-[20%]">الإجمالي</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mockPreviewSale.items.map((it, idx) => (
+                          <tr key={idx} className="border-b border-dashed border-black/20">
+                            <td className="py-0.5 text-right">{it.name}</td>
+                            <td className="py-0.5 text-center">{it.quantity}</td>
+                            <td className="py-0.5 text-left">{it.unitPrice.toFixed(0)}</td>
+                            <td className="py-0.5 text-left font-bold">{(it.quantity * it.unitPrice).toFixed(0)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    <div className="my-1.5 border-t border-dashed border-black" />
+
+                    {/* Totals */}
+                    <div className="space-y-0.5 text-black" style={{ fontSize: `${receiptFontSize * 0.8}px` }}>
+                      <div className="flex justify-between">
+                        <span className="text-black/80">الإجمالي الفرعي</span>
+                        <span className="font-semibold">{mockPreviewSale.subtotal.toFixed(0)} ج.م</span>
+                      </div>
+                      {mockPreviewSale.discount > 0 && (
+                        <div className="flex justify-between text-black">
+                          <span>الخصم</span>
+                          <span>-{mockPreviewSale.discount.toFixed(0)} ج.م</span>
+                        </div>
+                      )}
+                      {mockPreviewSale.vat > 0 && (
+                        <div className="flex justify-between">
+                          <span>الضريبة (14%)</span>
+                          <span>{mockPreviewSale.vat.toFixed(1)} ج.م</span>
+                        </div>
+                      )}
+                      <div
+                        className="flex justify-between border-y border-black py-0.5 font-extrabold my-1 text-black"
+                        style={{ fontSize: `${receiptFontSize * 0.9}px` }}
+                      >
+                        <span>الإجمالي الكلي</span>
+                        <span>{mockPreviewSale.total.toFixed(0)} ج.م</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>طريقة الدفع</span>
+                        <span>{mockPreviewSale.paymentMethod === "Cash" ? "نقدي" : "كارت"}</span>
+                      </div>
+                    </div>
+
+                    {/* Next Recommended Change */}
+                    {mockPreviewSale.oilUsed && mockPreviewSale.oilMileage && (
+                      <>
+                        <div className="my-1.5 border-t border-dashed border-black" />
+                        <div className="border border-black p-1.5 rounded text-center bg-black/[0.01]">
+                          <div className="font-bold text-black" style={{ fontSize: `${receiptFontSize * 0.75}px` }}>
+                            تغيير الزيت القادم الموصى به ({mockPreviewSale.oilMileage.toLocaleString()} كم)
+                          </div>
+                          <div
+                            className="mt-0.5 font-extrabold text-black tracking-wide"
+                            style={{ fontSize: `${receiptFontSize * 1.1}px` }}
+                          >
+                            {(mockPreviewSale.km + mockPreviewSale.oilMileage).toLocaleString()} كم
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="my-1.5 border-t border-dashed border-black" />
+                    <div className="text-center text-black font-bold" style={{ fontSize: `${receiptFontSize * 0.8}px` }}>
+                      شكراً لزيارتكم — رافقتكم السلامة!
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Local Storage Database Controls */}
         <Card className="border-amber-500/20 shadow-sm bg-card">
           <CardHeader>
@@ -487,6 +851,128 @@ function DeveloperControlsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Render the identical clean print-only receipt sibling container directly in body */}
+      {typeof document !== "undefined" && createPortal(
+        <div 
+          id="receipt-print-only" 
+          dir="rtl"
+        >
+          {/* Header */}
+          <div className="text-center mb-1">
+            {currentSettings.logoUrl && (
+              <img src={currentSettings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white" />
+            )}
+            <div className="text-sm font-black text-black leading-tight">
+              {currentSettings.companyNameAr}
+            </div>
+            <div className="mt-0.5 font-semibold text-black">
+              {currentSettings.sloganAr}
+            </div>
+            <div className="mt-1 text-black font-medium">
+              {currentSettings.phone && `ت: ${currentSettings.phone}`}
+              {currentSettings.phone && currentSettings.address && " | "}
+              {currentSettings.address && `${currentSettings.address}`}
+            </div>
+          </div>
+          
+          <div className="my-2 border-t-2 border-dashed border-black" />
+          
+          {/* Metadata */}
+          <div className="grid grid-cols-2 gap-y-1 text-black">
+            <div><b>رقم الفاتورة:</b></div>
+            <div className="text-left font-bold">#{mockPreviewSale.invoiceNumber}</div>
+            <div><b>التاريخ والوقت:</b></div>
+            <div className="text-left">
+              {mockPreviewSale.date.toLocaleDateString("ar-EG")} {mockPreviewSale.date.toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <div><b>أمين الصندوق:</b></div>
+            <div className="text-left">{mockPreviewSale.cashierName}</div>
+          </div>
+          
+          <div className="my-2 border-t border-dashed border-black" />
+          
+          {/* Customer */}
+          <div className="text-right leading-tight space-y-0.5 bg-black/[0.01] p-1.5 border border-dashed border-black rounded">
+            <div><b>العميل:</b> {mockPreviewSale.customerName}</div>
+            <div><b>الهاتف:</b> {mockPreviewSale.customerPhone}</div>
+            <div><b>السيارة:</b> {mockPreviewSale.carBrand} {mockPreviewSale.carModel} — {mockPreviewSale.km.toLocaleString()} كم</div>
+          </div>
+          
+          <div className="my-2 border-t border-dashed border-black" />
+          
+          {/* Product Items Table */}
+          <table className="w-full text-black border-collapse">
+            <thead>
+              <tr className="border-b border-black text-right font-bold">
+                <th className="py-1 text-right w-[45%]">البند</th>
+                <th className="py-1 text-center w-[15%]">الكمية</th>
+                <th className="py-1 text-left w-[20%]">السعر</th>
+                <th className="py-1 text-left w-[20%]">الإجمالي</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mockPreviewSale.items.map((it, idx) => (
+                <tr key={idx} className="border-b border-dashed border-black/20">
+                  <td className="py-1 text-right">{it.name}</td>
+                  <td className="py-1 text-center">{it.quantity}</td>
+                  <td className="py-1 text-left">{it.unitPrice.toFixed(0)}</td>
+                  <td className="py-1 text-left font-bold">{(it.quantity * it.unitPrice).toFixed(0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          
+          <div className="my-2 border-t border-dashed border-black" />
+          
+          {/* Totals */}
+          <div className="space-y-1 text-black">
+            <div className="flex justify-between">
+              <span className="text-black/80">الإجمالي الفرعي</span>
+              <span className="font-semibold">{mockPreviewSale.subtotal.toFixed(0)} ج.م</span>
+            </div>
+            {mockPreviewSale.discount > 0 && (
+              <div className="flex justify-between text-black">
+                <span>الخصم</span>
+                <span>-{mockPreviewSale.discount.toFixed(0)} ج.م</span>
+              </div>
+            )}
+            {mockPreviewSale.vat > 0 && (
+              <div className="flex justify-between">
+                <span>الضريبة (14%)</span>
+                <span>{mockPreviewSale.vat.toFixed(1)} ج.م</span>
+              </div>
+            )}
+            <div className="flex justify-between border-y-2 border-black py-1 font-extrabold my-1 text-black">
+              <span>الإجمالي الكلي</span>
+              <span>{mockPreviewSale.total.toFixed(0)} ج.م</span>
+            </div>
+            <div className="flex justify-between">
+              <span>طريقة الدفع</span>
+              <span>{mockPreviewSale.paymentMethod === "Cash" ? "نقدي" : "كارت"}</span>
+            </div>
+          </div>
+          
+          {/* Next Recommended Change */}
+          {mockPreviewSale.oilUsed && mockPreviewSale.oilMileage && (
+            <>
+              <div className="my-2 border-t border-dashed border-black" />
+              <div className="border border-black p-2 rounded text-center bg-black/[0.01]">
+                <div className="font-bold text-black">تغيير الزيت القادم الموصى به ({mockPreviewSale.oilMileage.toLocaleString()} كم)</div>
+                <div className="mt-1 font-extrabold text-black tracking-wide">
+                  {(mockPreviewSale.km + mockPreviewSale.oilMileage).toLocaleString()} كم
+                </div>
+              </div>
+            </>
+          )}
+          
+          <div className="my-2 border-t border-dashed border-black" />
+          <div className="text-center text-black font-bold">
+            شكراً لزيارتكم — رافقتكم السلامة!
+          </div>
+        </div>,
+        document.body
+      )}
     </PageShell>
   );
 }
