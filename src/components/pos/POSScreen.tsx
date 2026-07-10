@@ -40,7 +40,12 @@ export function POSScreen() {
   const [activeShift, setActiveShift] = useState(() => shiftService.getActiveShift());
   const [openingCash, setOpeningCash] = useState("0");
 
-  const [cartOpen, setCartOpen] = useState(true);
+  const [cartOpen, setCartOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth >= 1024;
+    }
+    return true;
+  });
 
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<ProductCategory | "All">("All");
