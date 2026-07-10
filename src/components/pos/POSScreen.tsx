@@ -275,7 +275,7 @@ export function POSScreen() {
     const km = typeof currentKm === "number" ? currentKm : activeCar.currentKm;
     const oilItem = items.find((i) => {
       const p = productService.get(i.productId);
-      return p?.category === "Engine Oil";
+      return p?.category === "Engine Oil" || p?.category === "زيوت محركات";
     });
     const oilProduct = oilItem ? productService.get(oilItem.productId) : null;
     const oilMileage = oilProduct?.oilMileage;
@@ -474,7 +474,7 @@ export function POSScreen() {
                         ? "فلتر زيت"
                         : p.category === "Air Filter"
                         ? "فلتر هواء"
-                        : "أخرى"}
+                        : p.category}
                     </span>
                     <span className="text-base font-black text-primary">
                       {p.sellingPrice.toFixed(0)}

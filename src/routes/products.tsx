@@ -234,9 +234,9 @@ function ProductsPage() {
                         ? "فلتر بنزين"
                         : p.category === "Additives"
                         ? "إضافات"
-                        : "إكسسوارات"}
+                        : p.category}
                     </span>
-                    {p.category === "Engine Oil" && p.oilMileage && (
+                    {(p.category === "Engine Oil" || p.category === "زيوت محركات") && p.oilMileage && (
                       <span className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded font-extrabold uppercase">
                         {p.oilMileage.toLocaleString()} KM
                       </span>
@@ -372,7 +372,7 @@ function ProductDialog({
     }
     // Clean up mileage if not oil product
     const cleanForm = { ...form };
-    if (cleanForm.category !== "Engine Oil") {
+    if (cleanForm.category !== "Engine Oil" && cleanForm.category !== "زيوت محركات") {
       delete cleanForm.oilMileage;
     }
     if (cleanForm.isUnlimited) {
@@ -411,7 +411,7 @@ function ProductDialog({
                   setForm({
                     ...form,
                     category: cat,
-                    oilMileage: cat === "Engine Oil" ? 5000 : undefined,
+                    oilMileage: (cat === "Engine Oil" || cat === "زيوت محركات") ? 5000 : undefined,
                   });
                 }}
               >
@@ -445,7 +445,7 @@ function ProductDialog({
             </div>
           </div>
 
-          {form.category === "Engine Oil" && (
+          {(form.category === "Engine Oil" || form.category === "زيوت محركات") && (
             <div>
               <Label>صلاحية الزيت (المسافة بالكم)</Label>
               <Select
