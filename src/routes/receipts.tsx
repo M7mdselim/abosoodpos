@@ -454,8 +454,8 @@ export function ReceiptViewDialog({
               )}
 
               <div className="my-2 border-t border-dashed border-black" />
-              <div className="text-center text-[10px] text-black font-bold">
-                شكراً لزيارتكم — رافقتكم السلامة!
+              <div className="text-center text-[10px] text-black font-bold whitespace-pre-line">
+                {settings.receiptFooter || "شكراً لزيارتكم — رافقتكم السلامة!"}
               </div>
             </div>
             
@@ -789,8 +789,8 @@ export function ReceiptViewDialog({
           )}
 
           <div className="my-2 border-t border-dashed border-black" />
-          <div className="text-center text-[10px] text-black font-bold">
-            شكراً لزيارتكم — رافقتكم السلامة!
+          <div className="text-center text-[10px] text-black font-bold whitespace-pre-line">
+            {settings.receiptFooter || "شكراً لزيارتكم — رافقتكم السلامة!"}
           </div>
         </div>,
         document.body

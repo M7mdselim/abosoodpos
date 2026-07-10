@@ -373,12 +373,6 @@ function SettingsPage() {
                     </div>
                   )}
                 </div>
-
-                <div className="flex justify-start">
-                  <Button variant="outline" size="sm" onClick={handleResetBrands} className="h-7.5 sm:h-8 text-[10px] sm:text-xs text-destructive hover:bg-destructive/10 border-destructive/20 shadow-xs">
-                    {language === "ar" ? "استعادة القائمة الافتراضية" : "Restore Defaults"}
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           </div>

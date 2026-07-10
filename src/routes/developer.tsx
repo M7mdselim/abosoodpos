@@ -15,9 +15,6 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import {
-  Database,
-  RefreshCw,
-  Trash2,
   ToggleLeft,
   Coins,
   ShieldAlert,
@@ -64,81 +61,10 @@ function DeveloperControlsPage() {
   const [address, setAddress] = useState(currentSettings.address);
   const [shiftMode, setShiftMode] = useState<"single" | "multiple">(currentSettings.shiftMode || "multiple");
   const [logoUrl, setLogoUrl] = useState(currentSettings.logoUrl || "");
+  const [lowStockThreshold, setLowStockThreshold] = useState(() => {
+    return currentSettings.lowStockThreshold !== undefined ? currentSettings.lowStockThreshold : 5;
+  });
 
-  const handleResetDatabase = () => {
-    if (confirm(language === "ar" ? "هل أنت متأكد من تصفير وإعادة تعيين قاعدة البيانات؟" : "Are you sure you want to reset the database?")) {
-      store.reset();
-      toast.success(
-        language === "ar"
-          ? "تم تصفير وإعادة تعيين البيانات الافتراضية"
-          : "Database reset to defaults successfully!"
-      );
-      router.invalidate();
-    }
-  };
-
-  const handleSeedMockData = () => {
-    const mockSeedSales = [
-      {
-        id: `s_mock_${Date.now()}_1`,
-        invoiceNumber: "999991",
-        date: new Date().toISOString(),
-        customerId: "c1",
-        customerName: "Mohamed Selim",
-        customerPhone: "0500000001",
-        carBrand: "Toyota",
-        carModel: "Camry",
-        km: 120000,
-        cashierId: "u_cashier",
-        cashierName: "Ahmed (Cashier)",
-        items: [
-          { productId: "p1", name: "Fully Synthetic Oil 5W-30", brand: "Castrol", unitPrice: 150, quantity: 4 },
-          { productId: "p2", name: "Premium Oil Filter", brand: "Toyota", unitPrice: 35, quantity: 1 }
-        ],
-        subtotal: 635,
-        discount: 35,
-        vat: 90,
-        total: 690,
-        paymentMethod: "Cash" as const,
-        oilUsed: "Castrol 5W-30",
-        shiftDay: new Date().toISOString().split("T")[0],
-        status: "active" as const,
-      },
-      {
-        id: `s_mock_${Date.now()}_2`,
-        invoiceNumber: "999992",
-        date: new Date().toISOString(),
-        customerId: "c2",
-        customerName: "Khalid Al-Ghamdi",
-        customerPhone: "0500000002",
-        carBrand: "Hyundai",
-        carModel: "Elantra",
-        km: 85000,
-        cashierId: "u_cashier",
-        cashierName: "Ahmed (Cashier)",
-        items: [
-          { productId: "p1", name: "Fully Synthetic Oil 5W-30", brand: "Castrol", unitPrice: 150, quantity: 3.5 },
-          { productId: "p3", name: "Air Filter", brand: "Hyundai", unitPrice: 45, quantity: 1 }
-        ],
-        subtotal: 570,
-        discount: 0,
-        vat: 85.5,
-        total: 655.5,
-        paymentMethod: "Card" as const,
-        oilUsed: "Castrol 5W-30",
-        shiftDay: new Date().toISOString().split("T")[0],
-        status: "active" as const,
-      }
-    ];
-
-    store.sales = [...mockSeedSales, ...store.sales];
-    toast.success(
-      language === "ar"
-        ? "تم حقن بيانات مبيعات تجريبية إضافية بنجاح"
-        : "Mock transactions seeded successfully!"
-    );
-    router.invalidate();
-  };
 
   const handleToggleVat = (checked: boolean) => {
     setVatEnabled(checked);
@@ -158,6 +84,17 @@ function DeveloperControlsPage() {
         ? `تم ${checked ? "تفعيل" : "تعطيل"} تنبيهات المخزون المنخفض`
         : `Low stock alerts ${checked ? "enabled" : "disabled"}`
     );
+  };
+
+  const handleUpdateStockThreshold = (val: number) => {
+    setLowStockThreshold(val);
+    const updated = {
+      ...currentSettings,
+      lowStockThreshold: val,
+    };
+    store.settings = updated;
+    backendService.saveSettings(updated).catch((err) => console.error("Error saving low stock threshold:", err));
+    router.invalidate();
   };
 
   const handleSaveSettings = (e: React.FormEvent) => {
@@ -184,6 +121,7 @@ function DeveloperControlsPage() {
   const [receiptWidth, setReceiptWidth] = useState(currentSettings.receiptWidth || 80);
   const [receiptMargin, setReceiptMargin] = useState(currentSettings.receiptMargin !== undefined ? currentSettings.receiptMargin : 4);
   const [receiptFontSize, setReceiptFontSize] = useState(currentSettings.receiptFontSize || 11);
+  const [receiptFooter, setReceiptFooter] = useState(currentSettings.receiptFooter || "شكراً لزيارتكم — رافقتكم السلامة!");
 
   const handleSavePrinterSettings = () => {
     const updated = {
@@ -191,6 +129,7 @@ function DeveloperControlsPage() {
       receiptWidth,
       receiptMargin,
       receiptFontSize,
+      receiptFooter,
     };
     store.settings = updated;
     backendService.saveSettings(updated).catch((err) => console.error("Error saving printer settings in backend:", err));
@@ -215,6 +154,7 @@ function DeveloperControlsPage() {
     setReceiptWidth(80);
     setReceiptMargin(4);
     setReceiptFontSize(11);
+    setReceiptFooter("شكراً لزيارتكم — رافقتكم السلامة!");
     toast.success(
       language === "ar" ? "تمت إعادة تعيين الإعدادات الافتراضية للطباعة" : "Reset printer defaults successfully"
     );
@@ -584,6 +524,25 @@ function DeveloperControlsPage() {
                         : "Baseline size for receipt textual content and line items."}
                     </p>
                   </div>
+
+                  {/* Receipt Footer Textarea */}
+                  <div className="space-y-2 text-left">
+                    <Label className="text-xs font-bold text-muted-foreground">
+                      {language === "ar" ? "نص تذييل الفاتورة (متعدد الأسطر)" : "Receipt Footer (Multi-line)"}
+                    </Label>
+                    <textarea
+                      value={receiptFooter}
+                      onChange={(e) => setReceiptFooter(e.target.value)}
+                      rows={3}
+                      placeholder={language === "ar" ? "شكراً لزيارتكم\nنسعد بخدمتكم دائماً" : "Thank you for your visit"}
+                      className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-right"
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      {language === "ar"
+                        ? "النص الذي يظهر في نهاية الإيصال. يدعم أسطر متعددة."
+                        : "Text displayed at the end of the receipt. Supports multiple lines."}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex gap-2">
@@ -743,8 +702,8 @@ function DeveloperControlsPage() {
                     )}
 
                     <div className="my-1.5 border-t border-dashed border-black" />
-                    <div className="text-center text-black font-bold" style={{ fontSize: `${receiptFontSize * 0.8}px` }}>
-                      شكراً لزيارتكم — رافقتكم السلامة!
+                    <div className="text-center text-black font-bold whitespace-pre-line" style={{ fontSize: `${receiptFontSize * 0.8}px` }}>
+                      {receiptFooter}
                     </div>
                   </div>
                 </div>
@@ -753,40 +712,6 @@ function DeveloperControlsPage() {
           </CardContent>
         </Card>
 
-        {/* Local Storage Database Controls */}
-        <Card className="border-amber-500/20 shadow-sm bg-card">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center gap-2">
-              <Database className="h-5 w-5 text-amber-500" />
-              {language === "ar" ? "قاعدة البيانات المحلية (LocalStorage)" : "LocalStorage DB Actions"}
-            </CardTitle>
-            <CardDescription>
-              {language === "ar"
-                ? "إعادة ضبط أو تعبئة الصندوق والبيانات بالقيم الأولية للتجربة."
-                : "Seeding, flushing or restoring demo data inside your browser storage."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-2">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                variant="outline"
-                className="flex-1 justify-center gap-2 h-12"
-                onClick={handleSeedMockData}
-              >
-                <RefreshCw className="h-4 w-4 text-emerald-500" />
-                <span>{language === "ar" ? "حقن عمليات تجريبية" : "Seed Staging Sales"}</span>
-              </Button>
-              <Button
-                variant="destructive"
-                className="flex-1 justify-center gap-2 h-12"
-                onClick={handleResetDatabase}
-              >
-                <Trash2 className="h-4 w-4" />
-                <span>{language === "ar" ? "تصفير وإعادة تهيئة" : "Wipe & Reset DB"}</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Feature Flags / Toggles */}
         <Card className="shadow-sm bg-card">
@@ -825,6 +750,35 @@ function DeveloperControlsPage() {
               </div>
               <Switch id="stock-toggle" checked={stockAlerts} onCheckedChange={handleToggleStockAlerts} />
             </div>
+
+            {stockAlerts && (
+              <div className="mt-3 p-3 bg-muted/40 rounded-lg border border-border space-y-2 text-left animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="stock-threshold" className="text-xs font-bold text-muted-foreground">
+                    {language === "ar" ? "حد التنبيه للمخزون المنخفض" : "Low Stock Alert Threshold"}
+                  </Label>
+                  <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                    {lowStockThreshold}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Input
+                    id="stock-threshold"
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={lowStockThreshold}
+                    onChange={(e) => handleUpdateStockThreshold(Number(e.target.value))}
+                    className="h-10 text-xs w-24 text-center font-bold"
+                  />
+                  <p className="text-[10px] text-muted-foreground leading-tight flex-1">
+                    {language === "ar"
+                      ? "سيتم إظهار تنبيه باللون البرتقالي عندما تكون كمية المنتج أقل من أو تساوي هذه القيمة."
+                      : "An orange warning badge will appear when a product's stock is less than or equal to this number."}
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -419,7 +419,7 @@ export function POSScreen() {
                           "text-[9px] px-1 rounded-sm font-black",
                           p.stock === 0 
                             ? "bg-destructive/15 text-destructive animate-pulse" 
-                            : p.stock <= 5 && stockAlertsEnabled
+                            : p.stock <= (store.settings.lowStockThreshold !== undefined ? store.settings.lowStockThreshold : 5) && stockAlertsEnabled
                             ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
                             : "bg-muted text-muted-foreground"
                         )}>
@@ -462,7 +462,7 @@ export function POSScreen() {
                           "text-[9px] font-bold px-1 rounded-sm shrink-0",
                           p.stock === 0 
                             ? "bg-destructive/15 text-destructive" 
-                            : p.stock <= 5 && stockAlertsEnabled
+                            : p.stock <= (store.settings.lowStockThreshold !== undefined ? store.settings.lowStockThreshold : 5) && stockAlertsEnabled
                             ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
                             : "bg-muted text-muted-foreground"
                         )}>
@@ -1224,8 +1224,8 @@ function ReceiptDialog({
             )}
             
             <div className="my-2 border-t border-dashed border-black" />
-            <div className="text-center text-[10px] text-black font-bold">
-              شكراً لزيارتكم — رافقتكم السلامة!
+            <div className="text-center text-[10px] text-black font-bold whitespace-pre-line">
+              {settings.receiptFooter || "شكراً لزيارتكم — رافقتكم السلامة!"}
             </div>
           </div>
         </div>
@@ -1430,8 +1430,8 @@ function ReceiptDialog({
           )}
           
           <div className="my-2 border-t border-dashed border-black" />
-          <div className="text-center text-[10px] text-black font-bold">
-            شكراً لزيارتكم — رافقتكم السلامة!
+          <div className="text-center text-[10px] text-black font-bold whitespace-pre-line">
+            {settings.receiptFooter || "شكراً لزيارتكم — رافقتكم السلامة!"}
           </div>
         </div>,
         document.body

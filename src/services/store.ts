@@ -12,6 +12,8 @@ export interface AppSettings {
   receiptMargin?: number;
   receiptFontSize?: number;
   logoUrl?: string;
+  receiptFooter?: string;
+  lowStockThreshold?: number;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -26,6 +28,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   receiptMargin: 4,
   receiptFontSize: 11,
   logoUrl: "/logo.jpg",
+  receiptFooter: "شكراً لزيارتكم — رافقتكم السلامة!",
+  lowStockThreshold: 5,
 };
 
 const getLocal = <T>(key: string, fallback: T): T => {

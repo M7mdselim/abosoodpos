@@ -52,6 +52,7 @@ export const Route = createFileRoute("/products")({
 import { store } from "@/services/store";
 
 function ProductsPage() {
+  const threshold = store.settings.lowStockThreshold !== undefined ? store.settings.lowStockThreshold : 5;
   const [categories, setCategories] = useState<string[]>(() => store.categories);
   const [query, setQuery] = useState("");
   const [tick, setTick] = useState(0);
@@ -66,18 +67,18 @@ function ProductsPage() {
   }, [allProducts]);
 
   const lowStockCount = useMemo(() => {
-    return allProducts.filter((p) => !p.isUnlimited && p.stock > 0 && p.stock <= 5).length;
-  }, [allProducts]);
+    return allProducts.filter((p) => !p.isUnlimited && p.stock > 0 && p.stock <= threshold).length;
+  }, [allProducts, threshold]);
 
   const list = useMemo(() => {
     let searched = productService.search(query);
     if (filterType === "out_of_stock") {
       searched = searched.filter((p) => !p.isUnlimited && p.stock <= 0);
     } else if (filterType === "low_stock") {
-      searched = searched.filter((p) => !p.isUnlimited && p.stock > 0 && p.stock <= 5);
+      searched = searched.filter((p) => !p.isUnlimited && p.stock > 0 && p.stock <= threshold);
     }
     return searched;
-  }, [query, filterType, tick]);
+  }, [query, filterType, tick, threshold]);
 
   const refresh = () => setTick((t) => t + 1);
 
@@ -235,7 +236,7 @@ function ProductsPage() {
                     <span className="text-muted-foreground font-semibold">غير محدود</span>
                   ) : (
                     <span className={`font-bold ${
-                      p.stock === 0 ? "text-destructive" : p.stock <= 5 ? "text-amber-600 dark:text-amber-400" : ""
+                      p.stock === 0 ? "text-destructive" : p.stock <= threshold ? "text-amber-600 dark:text-amber-400" : ""
                     }`}>
                       {p.stock}
                     </span>
