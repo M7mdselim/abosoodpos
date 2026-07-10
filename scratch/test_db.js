@@ -14,7 +14,7 @@ async function test() {
 
   try {
     await client.connect();
-    console.log("Success! Connected to Supabase on port 6543 in eu-north-1.");
+    console.log("Success! Connected to DB on port 6543 in eu-north-1.");
     const res = await client.query("SELECT NOW()");
     console.log("Query result:", res.rows[0]);
     await client.end();

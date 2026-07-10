@@ -9,7 +9,7 @@ const { Pool } = pg;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false, // Required for Supabase SSL connections
+    rejectUnauthorized: false, // Required for DB SSL connections
   },
 });
 
@@ -18,7 +18,7 @@ export async function query(text, params) {
 }
 
 export async function initDb() {
-  console.log("Initializing database tables on Supabase...");
+  console.log("Initializing database tables on DB...");
 
   // 1. Users table
   await query(`
