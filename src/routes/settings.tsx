@@ -166,35 +166,35 @@ function SettingsPage() {
       </div>
 
       {activeTab === "categories" ? (
-        <div className="grid gap-6 md:grid-cols-5 items-start">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-5 items-start">
           {/* Add New Category Card (Columns 4-5 on desktop, order-1/top on mobile) */}
           <div className="md:col-span-2 space-y-4 order-1 md:order-2 animate-in fade-in duration-200">
             <Card className="border border-border bg-card shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-foreground text-base">
+              <CardHeader className="p-3 sm:p-6 pb-1.5 sm:pb-4">
+                <CardTitle className="text-foreground text-sm sm:text-base font-black">
                   {language === "ar" ? "إضافة قسم جديد" : "Add New Category"}
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-[10px] sm:text-xs font-semibold">
                   {language === "ar" ? "أدخل اسم القسم (الفئة) لتصنيف المنتجات" : "Enter category name to classify products"}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2 text-right">
-                  <Label>{language === "ar" ? "اسم القسم" : "Category Name"}</Label>
+              <CardContent className="p-3 sm:p-6 pt-0 space-y-3 sm:space-y-4">
+                <div className="space-y-1.5 text-right">
+                  <Label className="text-[11px] sm:text-sm font-bold text-slate-600 dark:text-slate-400">{language === "ar" ? "اسم القسم" : "Category Name"}</Label>
                   <input
                     type="text"
                     placeholder="مثال: فلاتر، إكسسوارات"
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
-                    className="w-full h-10 px-3 bg-background border border-input rounded-md text-sm text-right"
+                    className="w-full h-9 sm:h-10 px-3 bg-background border border-input rounded-md text-xs sm:text-sm text-right font-semibold"
                     dir="rtl"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleAddCategory();
                     }}
                   />
                 </div>
-                <Button onClick={handleAddCategory} className="w-full h-10 font-bold flex items-center justify-center gap-2">
-                  <Plus className="h-4 w-4" />
+                <Button onClick={handleAddCategory} className="w-full h-9 sm:h-10 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 shadow-sm">
+                  <Plus className="h-3.5 w-3.5" />
                   {language === "ar" ? "إضافة وحفظ" : "Add and Save"}
                 </Button>
               </CardContent>
@@ -204,17 +204,17 @@ function SettingsPage() {
           {/* Categories List (Columns 1-3 on desktop, order-2/bottom on mobile) */}
           <div className="md:col-span-3 space-y-4 order-2 md:order-1">
             <Card className="border border-border bg-card shadow-sm animate-in fade-in duration-200">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-foreground text-base">
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-4">
+                <CardTitle className="text-foreground text-sm sm:text-base font-black">
                   {language === "ar" ? "قائمة الأقسام الحالية" : "Active Categories"}
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-[10px] sm:text-xs font-semibold">
                   {language === "ar"
                     ? "الأقسام المضافة تظهر في شاشة البيع وتصنيف المنتجات. يمكنك إعادة ترتيبها بالأسهم."
                     : "Categories shown on the POS sales screen and product catalog. Reorder them using the arrows."}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-3 sm:p-6 pt-0 space-y-3 sm:space-y-4">
                 {/* Search */}
                 <div className="relative">
                   <input
@@ -222,49 +222,49 @@ function SettingsPage() {
                     placeholder={language === "ar" ? "البحث عن قسم..." : "Search categories..."}
                     value={categorySearch}
                     onChange={(e) => setCategorySearch(e.target.value)}
-                    className="w-full h-10 px-3 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary text-right"
+                    className="w-full h-9 sm:h-10 px-3 bg-background border border-input rounded-md text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary text-right font-semibold"
                   />
                 </div>
 
                 {/* Categories Grid */}
-                <div className="border border-border rounded-lg max-h-[400px] overflow-y-auto divide-y divide-border">
+                <div className="border border-border rounded-lg max-h-[280px] sm:max-h-[400px] overflow-y-auto divide-y divide-border">
                   {categories
                     .filter((c) => c.toLowerCase().includes(categorySearch.toLowerCase()))
                     .map((c, idx) => (
-                      <div key={c} className="flex items-center justify-between p-3 bg-card hover:bg-accent/40 transition-colors">
-                        <span className="font-semibold text-sm text-right flex-1">{c}</span>
-                        <div className="flex items-center gap-1">
+                      <div key={c} className="flex items-center justify-between p-2 sm:p-3 bg-card hover:bg-accent/40 transition-colors">
+                        <span className="font-semibold text-xs sm:text-sm text-right flex-1 pr-1">{c}</span>
+                        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
                           <Button
                             variant="ghost"
                             size="icon"
                             disabled={idx === 0}
                             onClick={() => handleMoveCategoryUp(idx)}
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground disabled:opacity-30"
                           >
-                            <ArrowUp className="h-4 w-4" />
+                            <ArrowUp className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
                             disabled={idx === categories.length - 1}
                             onClick={() => handleMoveCategoryDown(idx)}
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground disabled:opacity-30"
                           >
-                            <ArrowDown className="h-4 w-4" />
+                            <ArrowDown className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleDeleteCategory(c)}
-                            className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </div>
                     ))}
                   {categories.filter((c) => c.toLowerCase().includes(categorySearch.toLowerCase())).length === 0 && (
-                    <div className="py-8 text-center text-muted-foreground text-sm">
+                    <div className="py-6 text-center text-muted-foreground text-xs sm:text-sm">
                       {language === "ar" ? "لا توجد أقسام تطابق البحث" : "No categories match your search"}
                     </div>
                   )}
@@ -274,42 +274,42 @@ function SettingsPage() {
           </div>
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-5 items-start">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-5 items-start">
           {/* Add New Brand Card (Columns 4-5 on desktop, order-1/top on mobile) */}
           <div className="md:col-span-2 space-y-4 order-1 md:order-2 animate-in fade-in duration-200">
             <Card className="border border-border bg-card shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-foreground text-base">
+              <CardHeader className="p-3 sm:p-6 pb-1.5 sm:pb-4">
+                <CardTitle className="text-foreground text-sm sm:text-base font-black">
                   {language === "ar" ? "إضافة ماركة جديدة" : "Add New Brand"}
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-[10px] sm:text-xs font-semibold">
                   {language === "ar" ? "أدخل اسم ماركة السيارة بالعربية والإنجليزية" : "Enter car brand name in Arabic and English"}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2 text-right">
-                  <Label>{language === "ar" ? "الاسم بالعربية" : "Name in Arabic"}</Label>
+              <CardContent className="p-3 sm:p-6 pt-0 space-y-3 sm:space-y-4">
+                <div className="space-y-1.5 text-right">
+                  <Label className="text-[11px] sm:text-sm font-bold text-slate-600 dark:text-slate-400">{language === "ar" ? "الاسم بالعربية" : "Name in Arabic"}</Label>
                   <input
                     type="text"
                     placeholder="مثال: تويوتا، هيونداي"
                     value={newBrandAr}
                     onChange={(e) => setNewBrandAr(e.target.value)}
-                    className="w-full h-10 px-3 bg-background border border-input rounded-md text-sm text-right"
+                    className="w-full h-9 sm:h-10 px-3 bg-background border border-input rounded-md text-xs sm:text-sm text-right font-semibold"
                     dir="rtl"
                   />
                 </div>
-                <div className="space-y-2 text-right">
-                  <Label>{language === "ar" ? "الاسم بالإنجليزية" : "Name in English"}</Label>
+                <div className="space-y-1.5 text-right">
+                  <Label className="text-[11px] sm:text-sm font-bold text-slate-600 dark:text-slate-400">{language === "ar" ? "الاسم بالإنجليزية" : "Name in English"}</Label>
                   <input
                     type="text"
                     placeholder="e.g. Toyota, Hyundai"
                     value={newBrandEn}
                     onChange={(e) => setNewBrandEn(e.target.value)}
-                    className="w-full h-10 px-3 bg-background border border-input rounded-md text-sm text-left"
+                    className="w-full h-9 sm:h-10 px-3 bg-background border border-input rounded-md text-xs sm:text-sm text-left font-semibold"
                   />
                 </div>
-                <Button onClick={handleAddBrand} className="w-full h-10 font-bold flex items-center justify-center gap-2">
-                  <Plus className="h-4 w-4" />
+                <Button onClick={handleAddBrand} className="w-full h-9 sm:h-10 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 shadow-sm">
+                  <Plus className="h-3.5 w-3.5" />
                   {language === "ar" ? "إضافة وحفظ" : "Add and Save"}
                 </Button>
               </CardContent>
@@ -319,17 +319,17 @@ function SettingsPage() {
           {/* Brand Listing (Columns 1-3 on desktop, order-2/bottom on mobile) */}
           <div className="md:col-span-3 space-y-4 order-2 md:order-1">
             <Card className="border border-border bg-card shadow-sm animate-in fade-in duration-200">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-foreground text-base">
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-4">
+                <CardTitle className="text-foreground text-sm sm:text-base font-black">
                   {language === "ar" ? "قائمة ماركات السيارات" : "Car Brands List"}
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-[10px] sm:text-xs font-semibold">
                   {language === "ar"
                     ? "هذه القائمة تظهر للكاشير عند تسجيل العملاء أو إضافة مركبات جديدة"
                     : "This list is shown to cashiers when registering customers or adding new vehicles"}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-3 sm:p-6 pt-0 space-y-3 sm:space-y-4">
                 {/* Search */}
                 <div className="relative">
                   <input
@@ -337,28 +337,28 @@ function SettingsPage() {
                     placeholder={language === "ar" ? "البحث عن ماركة..." : "Search brands..."}
                     value={brandSearch}
                     onChange={(e) => setBrandSearch(e.target.value)}
-                    className="w-full h-10 px-3 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary text-right"
+                    className="w-full h-9 sm:h-10 px-3 bg-background border border-input rounded-md text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary text-right font-semibold"
                   />
                 </div>
 
                 {/* Brands Grid */}
-                <div className="border border-border rounded-lg max-h-[400px] overflow-y-auto divide-y divide-border">
+                <div className="border border-border rounded-lg max-h-[280px] sm:max-h-[400px] overflow-y-auto divide-y divide-border">
                   {carBrands
                     .filter((b) =>
                       b.label.toLowerCase().includes(brandSearch.toLowerCase()) ||
                       b.value.toLowerCase().includes(brandSearch.toLowerCase())
                     )
                     .map((b) => (
-                      <div key={b.value} className="flex items-center justify-between p-3 bg-card hover:bg-accent/40 transition-colors">
-                        <div className="flex flex-col text-right">
-                          <span className="font-semibold text-sm">{b.label}</span>
-                          <span className="text-xs text-muted-foreground">Code/Value: {b.value}</span>
+                      <div key={b.value} className="flex items-center justify-between p-2 sm:p-3 bg-card hover:bg-accent/40 transition-colors">
+                        <div className="flex flex-col text-right pr-1">
+                          <span className="font-semibold text-xs sm:text-sm">{b.label}</span>
+                          <span className="text-[10px] text-muted-foreground">Code/Value: {b.value}</span>
                         </div>
                         <Button
                           variant="destructive"
                           size="sm"
                           onClick={() => handleDeleteBrand(b.value)}
-                          className="h-8 px-3 text-xs"
+                          className="h-7 sm:h-8 px-2.5 sm:px-3 text-[10px] sm:text-xs shrink-0"
                         >
                           {language === "ar" ? "حذف" : "Delete"}
                         </Button>
@@ -368,14 +368,14 @@ function SettingsPage() {
                     b.label.toLowerCase().includes(brandSearch.toLowerCase()) ||
                     b.value.toLowerCase().includes(brandSearch.toLowerCase())
                   ).length === 0 && (
-                    <div className="py-8 text-center text-muted-foreground text-sm">
+                    <div className="py-6 text-center text-muted-foreground text-xs sm:text-sm">
                       {language === "ar" ? "لا توجد ماركات تطابق البحث" : "No car brands match your search"}
                     </div>
                   )}
                 </div>
 
                 <div className="flex justify-start">
-                  <Button variant="outline" size="sm" onClick={handleResetBrands} className="text-xs text-destructive hover:bg-destructive/10 border-destructive/20">
+                  <Button variant="outline" size="sm" onClick={handleResetBrands} className="h-7.5 sm:h-8 text-[10px] sm:text-xs text-destructive hover:bg-destructive/10 border-destructive/20 shadow-xs">
                     {language === "ar" ? "استعادة القائمة الافتراضية" : "Restore Defaults"}
                   </Button>
                 </div>
