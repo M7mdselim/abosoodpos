@@ -142,7 +142,7 @@ function SettingsPage() {
         <button
           onClick={() => setActiveTab("categories")}
           className={cn(
-            "pb-3 pt-1 px-4 text-sm font-bold border-b-2 transition-colors flex items-center gap-2",
+            "pb-3 pt-1 px-2 sm:px-4 text-xs sm:text-sm font-bold border-b-2 transition-colors flex items-center justify-center gap-1.5 flex-1 sm:flex-initial",
             activeTab === "categories"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -154,7 +154,7 @@ function SettingsPage() {
         <button
           onClick={() => setActiveTab("brands")}
           className={cn(
-            "pb-3 pt-1 px-4 text-sm font-bold border-b-2 transition-colors flex items-center gap-2",
+            "pb-3 pt-1 px-2 sm:px-4 text-xs sm:text-sm font-bold border-b-2 transition-colors flex items-center justify-center gap-1.5 flex-1 sm:flex-initial",
             activeTab === "brands"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -167,8 +167,42 @@ function SettingsPage() {
 
       {activeTab === "categories" ? (
         <div className="grid gap-6 md:grid-cols-5 items-start">
-          {/* Left Side: Categories List (Columns 1-3) */}
-          <div className="md:col-span-3 space-y-4">
+          {/* Add New Category Card (Columns 4-5 on desktop, order-1/top on mobile) */}
+          <div className="md:col-span-2 space-y-4 order-1 md:order-2 animate-in fade-in duration-200">
+            <Card className="border border-border bg-card shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-foreground text-base">
+                  {language === "ar" ? "إضافة قسم جديد" : "Add New Category"}
+                </CardTitle>
+                <CardDescription>
+                  {language === "ar" ? "أدخل اسم القسم (الفئة) لتصنيف المنتجات" : "Enter category name to classify products"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2 text-right">
+                  <Label>{language === "ar" ? "اسم القسم" : "Category Name"}</Label>
+                  <input
+                    type="text"
+                    placeholder="مثال: فلاتر، إكسسوارات"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    className="w-full h-10 px-3 bg-background border border-input rounded-md text-sm text-right"
+                    dir="rtl"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleAddCategory();
+                    }}
+                  />
+                </div>
+                <Button onClick={handleAddCategory} className="w-full h-10 font-bold flex items-center justify-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  {language === "ar" ? "إضافة وحفظ" : "Add and Save"}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Categories List (Columns 1-3 on desktop, order-2/bottom on mobile) */}
+          <div className="md:col-span-3 space-y-4 order-2 md:order-1">
             <Card className="border border-border bg-card shadow-sm animate-in fade-in duration-200">
               <CardHeader className="pb-4">
                 <CardTitle className="text-foreground text-base">
@@ -238,45 +272,52 @@ function SettingsPage() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Right Side: Add New Category Card (Columns 4-5) */}
-          <div className="md:col-span-2 space-y-4 animate-in fade-in duration-200">
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-5 items-start">
+          {/* Add New Brand Card (Columns 4-5 on desktop, order-1/top on mobile) */}
+          <div className="md:col-span-2 space-y-4 order-1 md:order-2 animate-in fade-in duration-200">
             <Card className="border border-border bg-card shadow-sm">
               <CardHeader>
                 <CardTitle className="text-foreground text-base">
-                  {language === "ar" ? "إضافة قسم جديد" : "Add New Category"}
+                  {language === "ar" ? "إضافة ماركة جديدة" : "Add New Brand"}
                 </CardTitle>
                 <CardDescription>
-                  {language === "ar" ? "أدخل اسم القسم (الفئة) لتصنيف المنتجات" : "Enter category name to classify products"}
+                  {language === "ar" ? "أدخل اسم ماركة السيارة بالعربية والإنجليزية" : "Enter car brand name in Arabic and English"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2 text-right">
-                  <Label>{language === "ar" ? "اسم القسم" : "Category Name"}</Label>
+                  <Label>{language === "ar" ? "الاسم بالعربية" : "Name in Arabic"}</Label>
                   <input
                     type="text"
-                    placeholder="مثال: فلاتر، إكسسوارات"
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
+                    placeholder="مثال: تويوتا، هيونداي"
+                    value={newBrandAr}
+                    onChange={(e) => setNewBrandAr(e.target.value)}
                     className="w-full h-10 px-3 bg-background border border-input rounded-md text-sm text-right"
                     dir="rtl"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleAddCategory();
-                    }}
                   />
                 </div>
-                <Button onClick={handleAddCategory} className="w-full h-10 font-bold flex items-center justify-center gap-2">
+                <div className="space-y-2 text-right">
+                  <Label>{language === "ar" ? "الاسم بالإنجليزية" : "Name in English"}</Label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Toyota, Hyundai"
+                    value={newBrandEn}
+                    onChange={(e) => setNewBrandEn(e.target.value)}
+                    className="w-full h-10 px-3 bg-background border border-input rounded-md text-sm text-left"
+                  />
+                </div>
+                <Button onClick={handleAddBrand} className="w-full h-10 font-bold flex items-center justify-center gap-2">
                   <Plus className="h-4 w-4" />
                   {language === "ar" ? "إضافة وحفظ" : "Add and Save"}
                 </Button>
               </CardContent>
             </Card>
           </div>
-        </div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-5 items-start">
-          {/* Left Side: Brand Listing (Columns 1-3) */}
-          <div className="md:col-span-3 space-y-4">
+
+          {/* Brand Listing (Columns 1-3 on desktop, order-2/bottom on mobile) */}
+          <div className="md:col-span-3 space-y-4 order-2 md:order-1">
             <Card className="border border-border bg-card shadow-sm animate-in fade-in duration-200">
               <CardHeader className="pb-4">
                 <CardTitle className="text-foreground text-base">
@@ -338,47 +379,6 @@ function SettingsPage() {
                     {language === "ar" ? "استعادة القائمة الافتراضية" : "Restore Defaults"}
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Side: Add New Brand Card (Columns 4-5) */}
-          <div className="md:col-span-2 space-y-4 animate-in fade-in duration-200">
-            <Card className="border border-border bg-card shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-foreground text-base">
-                  {language === "ar" ? "إضافة ماركة جديدة" : "Add New Brand"}
-                </CardTitle>
-                <CardDescription>
-                  {language === "ar" ? "أدخل اسم ماركة السيارة بالعربية والإنجليزية" : "Enter car brand name in Arabic and English"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2 text-right">
-                  <Label>{language === "ar" ? "الاسم بالعربية" : "Name in Arabic"}</Label>
-                  <input
-                    type="text"
-                    placeholder="مثال: تويوتا، هيونداي"
-                    value={newBrandAr}
-                    onChange={(e) => setNewBrandAr(e.target.value)}
-                    className="w-full h-10 px-3 bg-background border border-input rounded-md text-sm text-right"
-                    dir="rtl"
-                  />
-                </div>
-                <div className="space-y-2 text-right">
-                  <Label>{language === "ar" ? "الاسم بالإنجليزية" : "Name in English"}</Label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Toyota, Hyundai"
-                    value={newBrandEn}
-                    onChange={(e) => setNewBrandEn(e.target.value)}
-                    className="w-full h-10 px-3 bg-background border border-input rounded-md text-sm text-left"
-                  />
-                </div>
-                <Button onClick={handleAddBrand} className="w-full h-10 font-bold flex items-center justify-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  {language === "ar" ? "إضافة وحفظ" : "Add and Save"}
-                </Button>
               </CardContent>
             </Card>
           </div>
