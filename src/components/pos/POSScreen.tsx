@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Search, Plus, Minus, Trash2, X, Printer, CreditCard, Banknote, CheckCircle2, UserPlus, Zap, Play, ShoppingCart, Star, CalendarDays, Calendar, Eye } from "lucide-react";
+import { Search, Plus, Minus, Trash2, X, Printer, CreditCard, Banknote, CheckCircle2, UserPlus, Zap, Play, ShoppingCart, Star, CalendarDays, Calendar, Eye, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 
 import { productService } from "@/services/productService";
@@ -51,6 +51,9 @@ export function POSScreen() {
   const [category, setCategory] = useState<ProductCategory | "All">("All");
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [discount, setDiscount] = useState(0);
+  const [popularMinimized, setPopularMinimized] = useState(() => {
+    return localStorage.getItem("pos_popular_minimized") === "true";
+  });
 
   const [phone, setPhone] = useState("");
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -370,46 +373,64 @@ export function POSScreen() {
         {/* Popular products list */}
         {popularProducts.length > 0 && (
           <div className="border-b border-border bg-amber-500/5 px-4 py-2">
-            <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
-              <Star className="h-3 w-3 fill-amber-500 text-amber-500" /> المنتجات الشائعة / سريعة الوصول
+            <div className="flex items-center justify-between mb-1">
+              <button
+                type="button"
+                onClick={() => {
+                  const nextVal = !popularMinimized;
+                  setPopularMinimized(nextVal);
+                  localStorage.setItem("pos_popular_minimized", String(nextVal));
+                }}
+                className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 hover:opacity-85 transition-all select-none"
+              >
+                <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+                <span>المنتجات الشائعة / سريعة الوصول</span>
+                {popularMinimized ? (
+                  <ChevronDown className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                ) : (
+                  <ChevronUp className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                )}
+              </button>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {popularProducts.map((p) => {
-                const isOutOfStock = !p.isUnlimited && p.stock <= 0;
-                const stockAlertsEnabled = localStorage.getItem("dev_feature_stock_alerts") !== "false";
-                
-                return (
-                  <button
-                    key={p.id}
-                    disabled={isOutOfStock}
-                    onClick={() => addProduct(p)}
-                    className={cn(
-                      "rounded-md border bg-card px-3 py-1.5 text-xs font-bold text-foreground flex items-center gap-1.5 shadow-xs transition-all",
-                      isOutOfStock 
-                        ? "border-dashed opacity-40 cursor-not-allowed bg-muted" 
-                        : "border-amber-500/20 hover:bg-amber-500/10 active:scale-95"
-                    )}
-                  >
-                    <span>{p.name}</span>
-                    <span className="text-[10px] text-amber-600 bg-amber-500/10 px-1 py-0.2 rounded font-black">
-                      {p.sellingPrice.toFixed(0)} ج.م
-                    </span>
-                    {!p.isUnlimited && (
-                      <span className={cn(
-                        "text-[9px] px-1 rounded-sm font-black",
-                        p.stock === 0 
-                          ? "bg-destructive/15 text-destructive animate-pulse" 
-                          : p.stock <= 5 && stockAlertsEnabled
-                          ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                          : "bg-muted text-muted-foreground"
-                      )}>
-                        {p.stock === 0 ? "نفذ" : `متبقي ${p.stock}`}
+            {!popularMinimized && (
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {popularProducts.map((p) => {
+                  const isOutOfStock = !p.isUnlimited && p.stock <= 0;
+                  const stockAlertsEnabled = localStorage.getItem("dev_feature_stock_alerts") !== "false";
+                  
+                  return (
+                    <button
+                      key={p.id}
+                      disabled={isOutOfStock}
+                      onClick={() => addProduct(p)}
+                      className={cn(
+                        "rounded-md border bg-card px-3 py-1.5 text-xs font-bold text-foreground flex items-center gap-1.5 shadow-xs transition-all",
+                        isOutOfStock 
+                          ? "border-dashed opacity-40 cursor-not-allowed bg-muted" 
+                          : "border-amber-500/20 hover:bg-amber-500/10 active:scale-95"
+                      )}
+                    >
+                      <span>{p.name}</span>
+                      <span className="text-[10px] text-amber-600 bg-amber-500/10 px-1 py-0.2 rounded font-black">
+                        {p.sellingPrice.toFixed(0)} ج.م
                       </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+                      {!p.isUnlimited && (
+                        <span className={cn(
+                          "text-[9px] px-1 rounded-sm font-black",
+                          p.stock === 0 
+                            ? "bg-destructive/15 text-destructive animate-pulse" 
+                            : p.stock <= 5 && stockAlertsEnabled
+                            ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                            : "bg-muted text-muted-foreground"
+                        )}>
+                          {p.stock === 0 ? "نفذ" : `متبقي ${p.stock}`}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
