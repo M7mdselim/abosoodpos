@@ -53,32 +53,32 @@ function LoginPage() {
 
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-between bg-gradient-to-tr from-slate-100 via-slate-50 to-blue-50/30 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 p-6">
+    <div className="flex min-h-screen flex-col items-center justify-between bg-gradient-to-tr from-slate-100 via-slate-50 to-blue-50/30 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 p-4 sm:p-6">
       {/* Vertically centering container for Card */}
       <div className="flex-1 flex items-center justify-center w-full max-w-md">
         <Card className="w-full shadow-2xl border-border bg-card/90 backdrop-blur-md relative overflow-hidden transition-all duration-300 hover:shadow-slate-200/50 dark:hover:shadow-black/25">
           {/* Subtle decorative top bar gradient */}
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600" />
           
-          <CardHeader className="text-center pb-4 pt-8 animate-in fade-in slide-in-from-top-4 duration-500">
+          <CardHeader className="text-center pb-3 sm:pb-4 pt-6 sm:pt-8 animate-in fade-in slide-in-from-top-4 duration-500">
             {settings.logoUrl ? (
               <div className="relative inline-block mx-auto mb-4 p-1 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 shadow-md">
-                <img src={settings.logoUrl} alt="Logo" className="h-20 w-20 object-cover rounded-full bg-white" />
+                <img src={settings.logoUrl} alt="Logo" className="h-16 w-16 sm:h-20 sm:w-20 object-cover rounded-full bg-white" />
               </div>
             ) : (
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary shadow-inner">
-                <Lock className="h-6 w-6" />
+              <div className="mx-auto mb-4 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-primary/10 text-primary shadow-inner">
+                <Lock className="h-5.5 w-5.5 sm:h-6 sm:w-6" />
               </div>
             )}
-            <CardTitle className="text-2xl font-black tracking-tight text-slate-800 dark:text-slate-100">
+            <CardTitle className="text-xl sm:text-2xl font-black tracking-tight text-slate-800 dark:text-slate-100">
               أهلاً بك في {settings.companyNameAr || "OilPro POS"}
             </CardTitle>
-            <CardDescription className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1.5">
+            <CardDescription className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1.5">
               أدخل حسابك لإدارة الخدمات ومبيعات نقطة البيع
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="pb-8 px-8">
+          <CardContent className="pb-6 sm:pb-8 px-4 sm:px-8">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="username" className="font-bold text-slate-700 dark:text-slate-300">{t("username")}</Label>
