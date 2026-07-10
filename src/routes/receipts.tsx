@@ -186,56 +186,63 @@ function ReceiptsPage() {
     >
       {/* Search & Filters */}
       <div className="mb-6 space-y-3">
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Search bar */}
-          <div className="relative flex-1">
+        {/* Top row: search full width, then date + filter button side-by-side */}
+        <div className="flex flex-col gap-3">
+          {/* Search bar – always full width */}
+          <div className="relative w-full">
             <Search className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="ابحث برقم الفاتورة، اسم العميل أو التليفون..."
-              className="h-12 pr-10 text-base border-slate-200 dark:border-white/10 rounded-xl"
+              className="h-11 pr-10 text-sm border-slate-200 dark:border-white/10 rounded-xl"
             />
           </div>
-          
-          {/* Date range filter */}
-          <div className="w-full sm:w-48">
-            <Select
-              value={dateFilter}
-              onValueChange={(v) => setDateFilter(v as any)}
-            >
-              <SelectTrigger className="h-12 text-sm border-slate-200 dark:border-white/10 rounded-xl bg-card">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-[#5470ff]" />
-                  <SelectValue placeholder="تاريخ الفواتير" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">الفواتير اليوم</SelectItem>
-                <SelectItem value="yesterday">الفواتير أمس</SelectItem>
-                <SelectItem value="2days">آخر يومين</SelectItem>
-                <SelectItem value="7days">آخر 7 أيام</SelectItem>
-                <SelectItem value="30days">آخر 30 يوم</SelectItem>
-                <SelectItem value="all">كل الأوقات</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
-          {/* Toggle Advanced Filters Button */}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-            className={`h-12 px-4 rounded-xl border border-slate-200 dark:border-white/10 text-sm font-bold flex items-center gap-2 ${
-              showAdvancedFilters ? "bg-[#5470ff]/10 text-[#5470ff] border-[#5470ff]/20 hover:bg-[#5470ff]/20" : "bg-card"
-            }`}
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            <span>تصفية متقدمة</span>
-            {(statusFilter !== "all" || paymentFilter !== "all" || cashierFilter !== "all" || carBrandFilter !== "all") && (
-              <span className="h-2 w-2 rounded-full bg-[#5470ff] animate-ping" />
-            )}
-          </Button>
+          {/* Second row: date filter + advanced toggle */}
+          <div className="flex gap-2">
+            {/* Date range filter */}
+            <div className="flex-1">
+              <Select
+                value={dateFilter}
+                onValueChange={(v) => setDateFilter(v as any)}
+              >
+                <SelectTrigger className="h-10 text-sm border-slate-200 dark:border-white/10 rounded-xl bg-card">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 shrink-0 text-[#5470ff]" />
+                    <SelectValue placeholder="التاريخ" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">الفواتير اليوم</SelectItem>
+                  <SelectItem value="yesterday">الفواتير أمس</SelectItem>
+                  <SelectItem value="2days">آخر يومين</SelectItem>
+                  <SelectItem value="7days">آخر 7 أيام</SelectItem>
+                  <SelectItem value="30days">آخر 30 يوم</SelectItem>
+                  <SelectItem value="all">كل الأوقات</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Toggle Advanced Filters Button */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className={`h-10 px-3 rounded-xl border text-xs font-bold flex items-center gap-1.5 shrink-0 ${
+                showAdvancedFilters
+                  ? "bg-[#5470ff]/10 text-[#5470ff] border-[#5470ff]/30 hover:bg-[#5470ff]/20"
+                  : "bg-card border-slate-200 dark:border-white/10"
+              }`}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">تصفية متقدمة</span>
+              <span className="inline sm:hidden">تصفية</span>
+              {(statusFilter !== "all" || paymentFilter !== "all" || cashierFilter !== "all" || carBrandFilter !== "all") && (
+                <span className="h-2 w-2 rounded-full bg-[#5470ff]" />
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Collapsible Advanced Filters Section */}
@@ -321,20 +328,20 @@ function ReceiptsPage() {
         )}
       </div>
 
-      {/* Receipts Table (Desktop View) */}
+      {/* Receipts Table (Desktop/Tablet View) */}
       <div className="hidden md:block rounded-xl border border-border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>رقم الفاتورة</TableHead>
-              <TableHead>التاريخ والوقت</TableHead>
-              <TableHead>العميل</TableHead>
-              <TableHead>رقم الجوال</TableHead>
-              <TableHead>الكاشير</TableHead>
-              <TableHead>الدفع</TableHead>
-              <TableHead>الإجمالي</TableHead>
-              <TableHead>الحالة</TableHead>
-              <TableHead className="text-left">الإجراءات</TableHead>
+              <TableHead className="whitespace-nowrap">رقم الفاتورة</TableHead>
+              <TableHead className="whitespace-nowrap">التاريخ والوقت</TableHead>
+              <TableHead className="whitespace-nowrap">العميل</TableHead>
+              <TableHead className="whitespace-nowrap hidden lg:table-cell">رقم الجوال</TableHead>
+              <TableHead className="whitespace-nowrap hidden lg:table-cell">الكاشير</TableHead>
+              <TableHead className="whitespace-nowrap">الدفع</TableHead>
+              <TableHead className="whitespace-nowrap">الإجمالي</TableHead>
+              <TableHead className="whitespace-nowrap">الحالة</TableHead>
+              <TableHead className="text-left whitespace-nowrap">الإجراءات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -342,40 +349,44 @@ function ReceiptsPage() {
               const isVoided = s.status === "voided";
               return (
                 <TableRow key={s.id} className={isVoided ? "opacity-60 bg-muted/20" : ""}>
-                  <TableCell className="font-mono text-sm font-semibold">#{s.invoiceNumber.replace("INV-", "")}</TableCell>
-                  <TableCell>{formatDateTime(s.date)}</TableCell>
+                  <TableCell className="font-mono text-sm font-semibold whitespace-nowrap">#{s.invoiceNumber.replace("INV-", "")}</TableCell>
+                  <TableCell className="text-xs whitespace-nowrap">{formatDateTime(s.date)}</TableCell>
                   <TableCell className="font-semibold">{s.customerName}</TableCell>
-                  <TableCell>{s.customerPhone}</TableCell>
-                  <TableCell>{s.cashierName}</TableCell>
-                  <TableCell className="font-semibold">
+                  <TableCell className="hidden lg:table-cell text-sm">{s.customerPhone}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm">{s.cashierName}</TableCell>
+                  <TableCell className="font-semibold text-sm">
                     {s.paymentMethod === "Cash"
                       ? "نقدي"
                       : s.paymentMethod === "Card"
                       ? "كارت"
-                      : `مختلط (${s.cashAmount?.toFixed(0)} نقدي + ${s.cardAmount?.toFixed(0)} كارت)`}
+                      : <span className="text-xs">مختلط</span>}
                   </TableCell>
-                  <TableCell className="font-bold text-primary">{formatCurrency(s.total)}</TableCell>
+                  <TableCell className="font-bold text-primary whitespace-nowrap">{formatCurrency(s.total)}</TableCell>
                   <TableCell>
-                    <Badge variant={isVoided ? "destructive" : "default"}>
+                    <Badge variant={isVoided ? "destructive" : "default"} className="text-[10px]">
                       {isVoided ? "ملغاة" : "نشطة"}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-left">
-                    <div className="flex gap-1.5">
+                    <div className="flex gap-1">
                       <Button
                         size="sm"
                         variant="outline"
+                        className="h-7 px-2 text-xs"
                         onClick={() => setSelectedSale(s)}
                       >
-                        <Eye className="mr-1 h-4 w-4" /> عرض
+                        <Eye className="h-3.5 w-3.5" />
+                        <span className="hidden lg:inline mr-1">عرض</span>
                       </Button>
                       {!isVoided && (session?.role === "admin" || session?.role === "developer" || session?.permissions?.canVoidReceipts === true) && (
                         <Button
                           size="sm"
                           variant="destructive"
+                          className="h-7 px-2 text-xs"
                           onClick={() => setVoidConfirmSale(s)}
                         >
-                          <Trash2 className="mr-1 h-4 w-4" /> إلغاء
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span className="hidden lg:inline mr-1">إلغاء</span>
                         </Button>
                       )}
                     </div>
@@ -489,17 +500,18 @@ function ReceiptsPage() {
 
       {/* Pagination controls */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-card p-3 rounded-lg border border-border mt-3 text-xs font-semibold">
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-card p-3 rounded-lg border border-border mt-3 text-xs font-semibold">
           <Button
             variant="outline"
             size="sm"
             disabled={currentPage === 1}
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
           >
-            السابق
+            → السابق
           </Button>
-          <span className="text-muted-foreground">
-            صفحة {currentPage} من {totalPages} (إجمالي {sales.length} فاتورة)
+          <span className="text-muted-foreground text-center">
+            {currentPage} / {totalPages}
+            <span className="hidden sm:inline"> (إجمالي {sales.length} فاتورة)</span>
           </span>
           <Button
             variant="outline"
@@ -507,7 +519,7 @@ function ReceiptsPage() {
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
           >
-            التالي
+            التالي ←
           </Button>
         </div>
       )}
@@ -583,11 +595,13 @@ export function ReceiptViewDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-w-sm p-4">
-          <div className="space-y-3">
-            <DialogHeader className="pb-1">
-              <DialogTitle className="text-sm">فاتورة المبيعات التفصيلية</DialogTitle>
-            </DialogHeader>
+        <DialogContent className="w-[95vw] max-w-md p-0 gap-0 overflow-hidden">
+          {/* Sticky Header */}
+          <DialogHeader className="px-4 pt-4 pb-3 border-b border-border shrink-0">
+            <DialogTitle className="text-sm font-black">فاتورة المبيعات التفصيلية</DialogTitle>
+          </DialogHeader>
+          {/* Scrollable Body */}
+          <div className="overflow-y-auto max-h-[80vh] px-4 pb-4 space-y-3">
 
             <div 
               id="receipt-print-admin" 
@@ -843,14 +857,15 @@ export function ReceiptViewDialog({
               </div>
             )}
 
-            <DialogFooter className="gap-1.5 mt-3">
-              <Button variant="ghost" size="sm" onClick={onClose}>إغلاق</Button>
-              {(session?.role !== "cashier" || session?.permissions?.canReprintReceipts === true) && (
-                <Button size="sm" onClick={() => window.print()}>
-                  <Printer className="mr-1.5 h-3.5 w-3.5" /> طباعة
-                </Button>
-              )}
-            </DialogFooter>
+          </div>
+          {/* Sticky Footer: always visible, outside the scroll area */}
+          <div className="px-4 pb-4 pt-3 border-t border-border shrink-0 flex items-center justify-end gap-1.5">
+            <Button variant="ghost" size="sm" onClick={onClose}>إغلاق</Button>
+            {(session?.role !== "cashier" || session?.permissions?.canReprintReceipts === true) && (
+              <Button size="sm" onClick={() => window.print()}>
+                <Printer className="mr-1.5 h-3.5 w-3.5" /> طباعة
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
