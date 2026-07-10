@@ -106,7 +106,7 @@ function LayoutWrapper() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-full overflow-hidden bg-background text-foreground">
+    <div className="flex flex-col h-screen h-[100dvh] w-full overflow-hidden bg-background text-foreground">
       <AppNavbar />
       <main className="flex-1 overflow-hidden relative">
         <Outlet />

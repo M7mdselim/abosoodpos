@@ -336,7 +336,7 @@ export function POSScreen() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] overflow-hidden relative">
+    <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden relative">
       {/* LEFT: Products */}
       <div className="flex flex-1 flex-col overflow-hidden border-r border-border relative w-full">
         <div className="border-b border-border bg-card px-4 py-3">
@@ -393,7 +393,7 @@ export function POSScreen() {
               </button>
             </div>
             {!popularMinimized && (
-              <div className="flex flex-wrap gap-1.5 mt-1">
+              <div className="flex flex-wrap gap-1.5 mt-1 max-h-[115px] sm:max-h-none overflow-y-auto pr-1">
                 {popularProducts.map((p) => {
                   const isOutOfStock = !p.isUnlimited && p.stock <= 0;
                   const stockAlertsEnabled = localStorage.getItem("dev_feature_stock_alerts") !== "false";
