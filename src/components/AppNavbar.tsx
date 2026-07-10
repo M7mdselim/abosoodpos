@@ -13,6 +13,8 @@ import {
   FileText,
   ChevronDown,
   Settings,
+  Menu,
+  X,
 } from "lucide-react";
 import { useSession } from "@/context/RoleContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -136,6 +138,7 @@ export function AppNavbar() {
   const router = useRouter();
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const closeTimeoutRef = useRef<number | null>(null);
 
   const handleMouseEnter = (key: string) => {
@@ -173,9 +176,18 @@ export function AppNavbar() {
   const settings = store.settings;
 
   return (
-    <header className="h-16 w-full shrink-0 border-b border-border bg-background px-6 flex items-center justify-between shadow-sm z-30 sticky top-0">
-      {/* Left side: Logo & Brand + Categorized Horizontal Menu */}
-      <div className="flex items-center gap-8">
+    <>
+      <header className="h-16 w-full shrink-0 border-b border-border bg-background px-6 flex items-center justify-between shadow-sm z-30 sticky top-0">
+      {/* Left side: Hamburger Button (mobile) + Logo & Brand + Categorized Horizontal Menu */}
+      <div className="flex items-center gap-4 md:gap-8">
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="flex md:hidden items-center justify-center p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none transition-colors"
+          aria-label="Toggle Menu"
+        >
+          <Menu className="h-6 w-6" />
+        </button>
+
         <Link to="/pos" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
           {settings.logoUrl ? (
             <img src={settings.logoUrl} alt="Logo" className="h-9 w-9 object-cover rounded-full shadow-sm border border-border bg-white" />
@@ -306,5 +318,110 @@ export function AppNavbar() {
         </button>
       </div>
     </header>
+
+    {/* Mobile Sidebar Menu Drawer */}
+    {mobileMenuOpen && (
+      <div className="fixed inset-0 z-50 flex md:hidden" dir="rtl">
+        {/* Overlay background */}
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-300"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+        
+        {/* Menu Drawer Content */}
+        <div className="relative flex w-80 max-w-[85vw] flex-col bg-card border-l border-border p-5 text-right shadow-2xl h-full overflow-y-auto animate-in slide-in-from-right duration-200">
+          {/* Header: Logo, Company Name, and Close Button */}
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
+            <div className="flex items-center gap-2.5">
+              {settings.logoUrl && (
+                <img src={settings.logoUrl} alt="Logo" className="h-8 w-8 object-cover rounded-full" />
+              )}
+              <div className="flex flex-col text-right">
+                <span className="font-black text-xs text-foreground leading-none">{settings.companyNameAr}</span>
+                <span className="text-[8px] text-muted-foreground font-bold mt-1.5 leading-none">{settings.sloganAr}</span>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-1 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* User Profile Info on Mobile */}
+          <div className="mb-6 rounded-xl bg-muted p-3.5 text-right border border-border/30">
+            <div className="font-bold text-sm text-foreground">{session.name}</div>
+            <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-1">
+              {session.role}
+            </div>
+          </div>
+
+          {/* List of Navigation Links Grouped by Category */}
+          <div className="space-y-6 flex-1 text-right">
+            {categories.map((cat) => {
+              const visibleItems = cat.items.filter((item) => {
+                if (item.to === "/receipts" || item.to === "/reports") {
+                  return (
+                    session.role !== "cashier" || session.permissions?.canViewReceipts === true
+                  );
+                }
+                return item.roles.includes(session.role);
+              });
+
+              if (visibleItems.length === 0) return null;
+
+              return (
+                <div key={cat.key} className="space-y-2">
+                  <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground text-right px-2">
+                    {cat.label}
+                  </div>
+                  <div className="grid gap-1">
+                    {visibleItems.map((item) => {
+                      const active =
+                        pathname === item.to ||
+                        (item.to !== "/" && pathname.startsWith(item.to));
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={cn(
+                            "flex items-center gap-3.5 rounded-lg px-3.5 py-2.5 text-right transition-all duration-200",
+                            active
+                              ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                              : "hover:bg-accent hover:text-accent-foreground text-muted-foreground hover:font-semibold"
+                          )}
+                        >
+                          <Icon className="h-4.5 w-4.5 shrink-0" />
+                          <span className="text-sm font-semibold">{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Mobile Logout Button */}
+          <div className="mt-auto pt-6 border-t border-border">
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                handleLogout();
+              }}
+              className="flex items-center justify-center gap-2 rounded-lg w-full py-3 text-sm font-bold text-destructive hover:bg-destructive/10 transition-colors border border-dashed border-destructive/20"
+            >
+              <LogOut className="h-4.5 w-4.5" />
+              <span>Sign Out / تسجيل الخروج</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   );
 }
