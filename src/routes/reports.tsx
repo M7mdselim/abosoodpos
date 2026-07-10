@@ -32,7 +32,7 @@ export const Route = createFileRoute("/reports")({
     }
     const session = authService.getSession();
     const isAdminOrDev = session?.role === "admin" || session?.role === "developer";
-    const isAllowedCashier = session?.role === "cashier" && session?.permissions?.canViewReceipts === true;
+    const isAllowedCashier = session?.role === "cashier" && session?.permissions?.canViewReports === true;
 
     if (!isAdminOrDev && !isAllowedCashier) {
       throw redirect({ to: "/pos" });

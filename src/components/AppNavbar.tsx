@@ -52,7 +52,7 @@ const categories: NavCategory[] = [
         label: "Receipts",
         description: "View sales history, reprint, or void receipts.",
         icon: FileText,
-        roles: ["developer", "admin"],
+        roles: ["developer", "admin", "cashier"],
       },
     ],
   },
@@ -199,10 +199,11 @@ export function AppNavbar() {
           {categories.map((cat) => {
             // Filter category items by user role and permissions
             const visibleItems = cat.items.filter((item) => {
-              if (item.to === "/receipts" || item.to === "/reports") {
-                return (
-                  session.role !== "cashier" || session.permissions?.canViewReceipts === true
-                );
+              if (item.to === "/receipts") {
+                return session.role !== "cashier" || session.permissions?.canViewReceipts === true;
+              }
+              if (item.to === "/reports") {
+                return session.role !== "cashier" || session.permissions?.canViewReports === true;
               }
               return item.roles.includes(session.role);
             });
@@ -363,10 +364,11 @@ export function AppNavbar() {
           <div className="space-y-6 flex-1 text-right">
             {categories.map((cat) => {
               const visibleItems = cat.items.filter((item) => {
-                if (item.to === "/receipts" || item.to === "/reports") {
-                  return (
-                    session.role !== "cashier" || session.permissions?.canViewReceipts === true
-                  );
+                if (item.to === "/receipts") {
+                  return session.role !== "cashier" || session.permissions?.canViewReceipts === true;
+                }
+                if (item.to === "/reports") {
+                  return session.role !== "cashier" || session.permissions?.canViewReports === true;
                 }
                 return item.roles.includes(session.role);
               });

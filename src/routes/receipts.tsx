@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Search, Eye, Trash2, Printer, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Search, Eye, Trash2, Printer, CheckCircle2, AlertTriangle, SlidersHorizontal, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageShell } from "@/components/PageShell";
@@ -47,12 +47,32 @@ function ReceiptsPage() {
   const { session } = useSession();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "voided">("all");
+  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "2days" | "7days" | "30days" | "all">("2days");
+  const [paymentFilter, setPaymentFilter] = useState<"all" | "Cash" | "Card" | "Mixed">("all");
+  const [cashierFilter, setCashierFilter] = useState<string>("all");
+  const [carBrandFilter, setCarBrandFilter] = useState<string>("all");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [voidConfirmSale, setVoidConfirmSale] = useState<Sale | null>(null);
   const [tick, setTick] = useState(0);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
+
+  // Compute unique cashiers for filter dropdown
+  const cashiers = useMemo(() => {
+    const list = saleService.list();
+    const unique = new Set(list.map((s) => s.cashierName).filter(Boolean));
+    return Array.from(unique);
+  }, [tick]);
+
+  // Compute unique car brands for filter dropdown
+  const carBrands = useMemo(() => {
+    const list = saleService.list();
+    const unique = new Set(list.map((s) => s.carBrand).filter(Boolean));
+    return Array.from(unique);
+  }, [tick]);
 
   const sales = useMemo(() => {
     let list = saleService.list();
@@ -84,6 +104,33 @@ function ReceiptsPage() {
       );
     }
 
+    // Date range filter
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    list = list.filter((s) => {
+      const saleTime = new Date(s.date).getTime();
+      if (dateFilter === "today") {
+        return saleTime >= todayStart;
+      }
+      if (dateFilter === "yesterday") {
+        const yesterdayStart = todayStart - 24 * 60 * 60 * 1000;
+        return saleTime >= yesterdayStart && saleTime < todayStart;
+      }
+      if (dateFilter === "2days") {
+        const twoDaysAgoStart = todayStart - 24 * 60 * 60 * 1000; // Today and Yesterday
+        return saleTime >= twoDaysAgoStart;
+      }
+      if (dateFilter === "7days") {
+        const sevenDaysAgo = todayStart - 6 * 24 * 60 * 60 * 1000;
+        return saleTime >= sevenDaysAgo;
+      }
+      if (dateFilter === "30days") {
+        const thirtyDaysAgo = todayStart - 29 * 24 * 60 * 60 * 1000;
+        return saleTime >= thirtyDaysAgo;
+      }
+      return true; // "all"
+    });
+
     // Status filter
     if (statusFilter !== "all") {
       list = list.filter((s) => {
@@ -92,13 +139,28 @@ function ReceiptsPage() {
       });
     }
 
+    // Payment method filter
+    if (paymentFilter !== "all") {
+      list = list.filter((s) => s.paymentMethod === paymentFilter);
+    }
+
+    // Cashier filter (admin/developer only)
+    if (session?.role !== "cashier" && cashierFilter !== "all") {
+      list = list.filter((s) => s.cashierName === cashierFilter);
+    }
+
+    // Car Brand filter
+    if (carBrandFilter !== "all") {
+      list = list.filter((s) => s.carBrand === carBrandFilter);
+    }
+
     return list;
-  }, [query, statusFilter, session, tick]);
+  }, [query, statusFilter, dateFilter, paymentFilter, cashierFilter, carBrandFilter, session, tick]);
 
   // Reset page when search or status filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [query, statusFilter]);
+  }, [query, statusFilter, dateFilter, paymentFilter, cashierFilter, carBrandFilter]);
 
   const totalPages = Math.ceil(sales.length / itemsPerPage) || 1;
   const paginatedSales = useMemo(() => {
@@ -123,35 +185,144 @@ function ReceiptsPage() {
       subtitle={`${sales.length} فاتورة مسجلة بالنظام`}
     >
       {/* Search & Filters */}
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <div className="relative max-w-md flex-1">
-          <Search className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="ابحث برقم الفاتورة، اسم العميل أو التليفون..."
-            className="h-12 pr-10 text-base"
-          />
-        </div>
-        <div className="w-48">
-          <Select
-            value={statusFilter}
-            onValueChange={(v) => setStatusFilter(v as any)}
+      <div className="mb-6 space-y-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Search bar */}
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="ابحث برقم الفاتورة، اسم العميل أو التليفون..."
+              className="h-12 pr-10 text-base border-slate-200 dark:border-white/10 rounded-xl"
+            />
+          </div>
+          
+          {/* Date range filter */}
+          <div className="w-full sm:w-48">
+            <Select
+              value={dateFilter}
+              onValueChange={(v) => setDateFilter(v as any)}
+            >
+              <SelectTrigger className="h-12 text-sm border-slate-200 dark:border-white/10 rounded-xl bg-card">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-[#5470ff]" />
+                  <SelectValue placeholder="تاريخ الفواتير" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">الفواتير اليوم</SelectItem>
+                <SelectItem value="yesterday">الفواتير أمس</SelectItem>
+                <SelectItem value="2days">آخر يومين</SelectItem>
+                <SelectItem value="7days">آخر 7 أيام</SelectItem>
+                <SelectItem value="30days">آخر 30 يوم</SelectItem>
+                <SelectItem value="all">كل الأوقات</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Toggle Advanced Filters Button */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className={`h-12 px-4 rounded-xl border border-slate-200 dark:border-white/10 text-sm font-bold flex items-center gap-2 ${
+              showAdvancedFilters ? "bg-[#5470ff]/10 text-[#5470ff] border-[#5470ff]/20 hover:bg-[#5470ff]/20" : "bg-card"
+            }`}
           >
-            <SelectTrigger className="h-12 text-sm">
-              <SelectValue placeholder="حالة الفاتورة" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">كل الفواتير</SelectItem>
-              <SelectItem value="active">الفواتير النشطة</SelectItem>
-              <SelectItem value="voided">الفواتير الملغاة</SelectItem>
-            </SelectContent>
-          </Select>
+            <SlidersHorizontal className="h-4 w-4" />
+            <span>تصفية متقدمة</span>
+            {(statusFilter !== "all" || paymentFilter !== "all" || cashierFilter !== "all" || carBrandFilter !== "all") && (
+              <span className="h-2 w-2 rounded-full bg-[#5470ff] animate-ping" />
+            )}
+          </Button>
         </div>
+
+        {/* Collapsible Advanced Filters Section */}
+        {showAdvancedFilters && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-white/5 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
+            {/* Status Filter */}
+            <div className="space-y-1 text-right" dir="rtl">
+              <Label className="text-xs font-bold text-slate-500">حالة الفاتورة</Label>
+              <Select
+                value={statusFilter}
+                onValueChange={(v) => setStatusFilter(v as any)}
+              >
+                <SelectTrigger className="h-10 text-xs rounded-lg bg-card">
+                  <SelectValue placeholder="الحالة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">الكل</SelectItem>
+                  <SelectItem value="active">نشطة</SelectItem>
+                  <SelectItem value="voided">ملغاة</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Payment Method Filter */}
+            <div className="space-y-1 text-right" dir="rtl">
+              <Label className="text-xs font-bold text-slate-500">طريقة الدفع</Label>
+              <Select
+                value={paymentFilter}
+                onValueChange={(v) => setPaymentFilter(v as any)}
+              >
+                <SelectTrigger className="h-10 text-xs rounded-lg bg-card">
+                  <SelectValue placeholder="طريقة الدفع" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">الكل</SelectItem>
+                  <SelectItem value="Cash">نقدي</SelectItem>
+                  <SelectItem value="Card">كارت</SelectItem>
+                  <SelectItem value="Mixed">مختلط</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Cashier Filter (Admins/Developers) */}
+            {session?.role !== "cashier" && (
+              <div className="space-y-1 text-right" dir="rtl">
+                <Label className="text-xs font-bold text-slate-500">الكاشير</Label>
+                <Select
+                  value={cashierFilter}
+                  onValueChange={setCashierFilter}
+                >
+                  <SelectTrigger className="h-10 text-xs rounded-lg bg-card">
+                    <SelectValue placeholder="اختر الكاشير" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">كل الموظفين</SelectItem>
+                    {cashiers.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Car Brand Filter */}
+            <div className="space-y-1 text-right" dir="rtl">
+              <Label className="text-xs font-bold text-slate-500">ماركة السيارة</Label>
+              <Select
+                value={carBrandFilter}
+                onValueChange={setCarBrandFilter}
+              >
+                <SelectTrigger className="h-10 text-xs rounded-lg bg-card">
+                  <SelectValue placeholder="اختر الماركة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">كل الماركات</SelectItem>
+                  {carBrands.map((b) => (
+                    <SelectItem key={b} value={b}>{b}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Receipts Table */}
-      <div className="rounded-xl border border-border bg-card overflow-x-auto">
+      {/* Receipts Table (Desktop View) */}
+      <div className="hidden md:block rounded-xl border border-border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -221,6 +392,99 @@ function ReceiptsPage() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Receipts Cards (Mobile View) */}
+      <div className="md:hidden space-y-3">
+        {paginatedSales.map((s) => {
+          const isVoided = s.status === "voided";
+          return (
+            <div 
+              key={s.id} 
+              className={`rounded-xl border p-4 bg-card shadow-sm space-y-3.5 ${
+                isVoided ? "opacity-60 bg-muted/20 border-slate-200/60 dark:border-white/5" : "border-slate-200/80 dark:border-white/10"
+              }`}
+            >
+              {/* Card Header: Inv No & Status */}
+              <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-white/5">
+                <span className="font-mono text-sm font-black text-slate-800 dark:text-slate-250">
+                  #{s.invoiceNumber.replace("INV-", "")}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Badge variant={isVoided ? "destructive" : "default"} className="text-[10px] px-2 py-0.5 font-bold">
+                    {isVoided ? "ملغاة" : "نشطة"}
+                  </Badge>
+                  <span className="text-[10px] text-muted-foreground font-semibold">
+                    {new Date(s.date).toLocaleDateString("ar-EG")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Card Content Grid */}
+              <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-right" dir="rtl">
+                <div className="space-y-0.5">
+                  <span className="text-slate-400 font-bold block text-[10px]">العميل</span>
+                  <span className="font-extrabold text-slate-800 dark:text-slate-200 text-xs">{s.customerName}</span>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-slate-400 font-bold block text-[10px]">رقم الجوال</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300 text-xs">{s.customerPhone || "—"}</span>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-slate-400 font-bold block text-[10px]">السيارة</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-350 text-xs">
+                    {s.carBrand ? `${s.carBrand} ${s.carModel || ""}` : "—"}
+                  </span>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-slate-400 font-bold block text-[10px]">الكاشير</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300 text-xs">{s.cashierName}</span>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-slate-400 font-bold block text-[10px]">طريقة الدفع</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                    {s.paymentMethod === "Cash"
+                      ? "نقدي"
+                      : s.paymentMethod === "Card"
+                      ? "كارت"
+                      : "مختلط"}
+                  </span>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-slate-400 font-bold block text-[10px]">الإجمالي</span>
+                  <span className="font-extrabold text-blue-600 dark:text-blue-400 text-xs">{formatCurrency(s.total)}</span>
+                </div>
+              </div>
+
+              {/* Card Actions */}
+              <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-white/5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 h-9 text-xs font-bold gap-1"
+                  onClick={() => setSelectedSale(s)}
+                >
+                  <Eye className="h-3.5 w-3.5" /> عرض الفاتورة
+                </Button>
+                {!isVoided && (session?.role === "admin" || session?.role === "developer" || session?.permissions?.canVoidReceipts === true) && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="flex-1 h-9 text-xs font-bold gap-1"
+                    onClick={() => setVoidConfirmSale(s)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> إلغاء الفاتورة
+                  </Button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {sales.length === 0 && (
+          <div className="py-12 text-center text-muted-foreground border border-dashed rounded-xl bg-card text-sm">
+            لم يتم العثور على فواتير تطابق شروط البحث.
+          </div>
+        )}
       </div>
 
       {/* Pagination controls */}

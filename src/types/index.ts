@@ -9,6 +9,7 @@ export interface UserPermissions {
   canReprintReceipts?: boolean;
   canEditPaymentMethods?: boolean;
   canVoidReceipts?: boolean;
+  canViewReports?: boolean;
 }
 
 export interface User {

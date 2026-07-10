@@ -181,12 +181,18 @@ function UsersPage() {
                           {u.permissions?.canPrintSpotCheck && <Badge variant="secondary" className="text-[10px]">جرد الوردية</Badge>}
                           {u.permissions?.canViewReceipts && <Badge variant="secondary" className="text-[10px]">عرض الفواتير</Badge>}
                           {u.permissions?.canReprintReceipts && <Badge variant="secondary" className="text-[10px]">إعادة الطباعة</Badge>}
+                          {u.permissions?.canViewReports && <Badge variant="secondary" className="text-[10px]">عرض التقارير</Badge>}
+                          {u.permissions?.canEditPaymentMethods && <Badge variant="secondary" className="text-[10px]">تعديل الدفع</Badge>}
+                          {u.permissions?.canVoidReceipts && <Badge variant="secondary" className="text-[10px]">إلغاء فواتير</Badge>}
                           {!u.permissions?.canDiscount && 
                            !u.permissions?.canOpenShift && 
                            !u.permissions?.canCloseShift && 
                            !u.permissions?.canPrintSpotCheck &&
                            !u.permissions?.canViewReceipts &&
-                           !u.permissions?.canReprintReceipts && (
+                           !u.permissions?.canReprintReceipts &&
+                           !u.permissions?.canViewReports &&
+                           !u.permissions?.canEditPaymentMethods &&
+                           !u.permissions?.canVoidReceipts && (
                              <span className="text-red-500 font-semibold">ممنوع من كل الصلاحيات</span>
                            )}
                         </div>
@@ -257,6 +263,7 @@ function UserFormDialog({
   const [canReprintReceipts, setCanReprintReceipts] = useState(false);
   const [canEditPaymentMethods, setCanEditPaymentMethods] = useState(false);
   const [canVoidReceipts, setCanVoidReceipts] = useState(false);
+  const [canViewReports, setCanViewReports] = useState(false);
 
   // Sync state when dialog opens or user changes
   useMemo(() => {
@@ -275,6 +282,7 @@ function UserFormDialog({
         setCanReprintReceipts(user.permissions?.canReprintReceipts ?? false);
         setCanEditPaymentMethods(user.permissions?.canEditPaymentMethods ?? false);
         setCanVoidReceipts(user.permissions?.canVoidReceipts ?? false);
+        setCanViewReports(user.permissions?.canViewReports ?? false);
       } else {
         setName("");
         setUsername("");
@@ -289,6 +297,7 @@ function UserFormDialog({
         setCanReprintReceipts(false);
         setCanEditPaymentMethods(false);
         setCanVoidReceipts(false);
+        setCanViewReports(false);
       }
     }
   }, [open, user]);
@@ -316,6 +325,7 @@ function UserFormDialog({
       canReprintReceipts,
       canEditPaymentMethods,
       canVoidReceipts,
+      canViewReports,
     };
 
     if (isEdit && user) {
@@ -478,7 +488,18 @@ function UserFormDialog({
                     onCheckedChange={(checked) => setCanViewReceipts(!!checked)}
                   />
                   <label htmlFor="perm_view_receipts" className="font-semibold cursor-pointer select-none">
-                    عرض صفحة فواتير المبيعات والتقارير
+                    عرض صفحة فواتير المبيعات
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox 
+                    id="perm_view_reports" 
+                    checked={canViewReports} 
+                    onCheckedChange={(checked) => setCanViewReports(!!checked)}
+                  />
+                  <label htmlFor="perm_view_reports" className="font-semibold cursor-pointer select-none">
+                    عرض صفحة التقارير والرسوم البيانية (Reports)
                   </label>
                 </div>
 

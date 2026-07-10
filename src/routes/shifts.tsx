@@ -72,6 +72,14 @@ function ShiftsPage() {
     return shifts;
   }, [tick, session]);
 
+  // For cashiers: find the ID of their most-recently closed shift
+  // so we can restrict spot-check printing to only active + last closed
+  const cashierLastClosedShiftId = useMemo(() => {
+    if (session?.role !== "cashier") return null;
+    const closed = history.filter((s) => s.status === "closed");
+    return closed.length > 0 ? closed[0].id : null;
+  }, [history, session]);
+
   const proposedShiftDay = useMemo(() => {
     return shiftService.getNextProposedShiftDay(startNewDay);
   }, [startNewDay, history]);
@@ -341,7 +349,16 @@ function ShiftsPage() {
                   ) : (
                     history.map((s) => {
                       const variance = s.actualCash !== undefined && s.actualCash !== null ? s.actualCash - s.expectedCash : null;
-                      const canPrint = (session?.role !== "cashier" || s.cashierId === session.id) && hasPrintSpotPermission;
+                      // Cashiers can only print spot-check for:
+                      //  1. The currently active shift (their own)
+                      //  2. Their single most-recently closed shift
+                      // Admins/developers can print any shift's spot check
+                      const isAllowedShiftForCashier =
+                        s.status === "open" // active shift
+                        || s.id === cashierLastClosedShiftId; // most recent closed
+                      const canPrint =
+                        hasPrintSpotPermission &&
+                        (session?.role !== "cashier" || (s.cashierId === session.id && isAllowedShiftForCashier));
                       return (
                         <TableRow key={s.id}>
                           <TableCell className="font-bold text-amber-700 font-mono">{s.shiftDay}</TableCell>
