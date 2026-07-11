@@ -364,7 +364,8 @@ function UserFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg text-right">
+      {/* تمت إضافة max-h-[90vh] و overflow-y-auto و w-[95vw] لتناسب الجوال */}
+      <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto text-right p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-right">
             {isEdit ? <Edit className="h-5 w-5 text-blue-600" /> : <Plus className="h-5 w-5 text-primary" />}
@@ -373,7 +374,8 @@ function UserFormDialog({
         </DialogHeader>
 
         <div className="grid gap-4 py-3 text-right">
-          <div className="grid grid-cols-2 gap-3">
+          {/* تحويل grid-cols-2 إلى grid-cols-1 sm:grid-cols-2 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="font-bold">اسم الموظف كاملاً</Label>
               <Input 
@@ -394,15 +396,16 @@ function UserFormDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* تحويل grid-cols-2 إلى grid-cols-1 sm:grid-cols-2 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="font-bold">كلمة المرور</Label>
               <Input 
-                type="text"
+                type="password"
                 value={password} 
                 onChange={(e) => setPassword(e.target.value)} 
                 placeholder={isEdit ? "اتركها فارغة لعدم التغيير" : "اكتب كلمة المرور..."}
-                className="h-11 font-mono"
+                className="h-11 font-mono text-left"
               />
             </div>
             <div className="space-y-1">
@@ -418,7 +421,8 @@ function UserFormDialog({
             </div>
           </div>
 
-          <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-border dark:bg-slate-900/30">
+          {/* جعل الحاوية تتجاوب وتتكدس عمودياً في الشاشات الصغيرة جداً إذا لزم الأمر */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-lg border border-border dark:bg-slate-900/30">
             <span className="font-bold text-sm text-slate-800 dark:text-slate-200">تفعيل حساب المستخدم فوراً؟</span>
             <div className="flex items-center gap-2">
               <Switch
@@ -436,7 +440,8 @@ function UserFormDialog({
                 <ShieldAlert className="h-4 w-4" /> صلاحيات الكاشير في نقطة البيع
               </h4>
               
-              <div className="grid grid-cols-2 gap-3 text-xs">
+              {/* تحويل grid-cols-2 إلى grid-cols-1 sm:grid-cols-2 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div className="flex items-center space-x-2 space-x-reverse">
                   <Checkbox 
                     id="perm_discount" 
@@ -540,9 +545,9 @@ function UserFormDialog({
           )}
         </div>
 
-        <DialogFooter className="gap-2 justify-end">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>إلغاء</Button>
-          <Button onClick={handleSave} className="font-bold px-6">حفظ الحساب</Button>
+        <DialogFooter className="gap-2 justify-end sm:flex-row flex-col">
+          <Button variant="ghost" className="w-full sm:w-auto" onClick={() => onOpenChange(false)}>إلغاء</Button>
+          <Button onClick={handleSave} className="font-bold px-6 w-full sm:w-auto">حفظ الحساب</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
