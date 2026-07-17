@@ -15,6 +15,9 @@ export interface AppSettings {
   receiptFooter?: string;
   lowStockThreshold?: number;
   directPrint?: boolean;
+  autoBackupEnabled?: boolean;
+  autoBackupTime?: string;
+  lastAutoBackupDate?: string;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -32,6 +35,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   receiptFooter: "شكراً لزيارتكم — رافقتكم السلامة!",
   lowStockThreshold: 5,
   directPrint: false,
+  autoBackupEnabled: false,
+  autoBackupTime: "22:00",
+  lastAutoBackupDate: "",
 };
 
 const getLocal = <T>(key: string, fallback: T): T => {

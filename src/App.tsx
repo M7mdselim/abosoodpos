@@ -2,6 +2,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import { getRouter } from "./router";
 import { useEffect, useState } from "react";
 import { backendService } from "./services/backendService";
+import { store } from "./services/store";
 import { toast } from "sonner";
 
 const router = getRouter();
@@ -33,6 +34,85 @@ export default function App() {
       }
     }
     initDb();
+  }, []);
+
+  // Shared auto-backup download function
+  const runAutoBackup = async () => {
+    const settings = store.settings;
+    const now = new Date();
+    const todayDate = now.toLocaleDateString("en-CA");
+    try {
+      const data = await backendService.exportBackup();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `abosoodpos_auto_backup_${todayDate}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mm = String(now.getMinutes()).padStart(2, "0");
+      toast.success(
+        `💾 تم تنزيل النسخة الاحتياطية التلقائية اليومية بنجاح (${hh}:${mm})`,
+        { duration: 8000 }
+      );
+
+      const updatedSettings = { ...settings, lastAutoBackupDate: todayDate };
+      store.settings = updatedSettings;
+      await backendService.saveSettings(updatedSettings);
+    } catch (err: any) {
+      console.error("Auto backup failed:", err);
+    }
+  };
+
+  // On app load: check if today's backup was missed (scheduled time already passed)
+  useEffect(() => {
+    const checkMissedBackup = async () => {
+      // Wait a moment for settings to be loaded from backend
+      await new Promise(r => setTimeout(r, 3000));
+
+      const settings = store.settings;
+      if (!settings?.autoBackupEnabled || !settings?.autoBackupTime) return;
+
+      const now = new Date();
+      const todayDate = now.toLocaleDateString("en-CA");
+      if (settings.lastAutoBackupDate === todayDate) return; // Already backed up today
+
+      // Check if scheduled time has already passed
+      const [schedH, schedM] = settings.autoBackupTime.split(":").map(Number);
+      const scheduledMinutes = schedH * 60 + schedM;
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+      if (currentMinutes > scheduledMinutes) {
+        // Missed backup — run it now
+        console.log("⏰ Missed auto-backup detected, running now...");
+        await runAutoBackup();
+      }
+    };
+    checkMissedBackup();
+  }, [syncing]); // Re-check after initial sync completes
+
+  // Background check for Auto Backup every 30 seconds (for exact-time match)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const settings = store.settings;
+      if (!settings?.autoBackupEnabled || !settings?.autoBackupTime) return;
+
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      const currentHHMM = `${hours}:${minutes}`;
+      const todayDate = now.toLocaleDateString("en-CA");
+
+      if (currentHHMM === settings.autoBackupTime && settings.lastAutoBackupDate !== todayDate) {
+        await runAutoBackup();
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
   if (syncing) {

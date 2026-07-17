@@ -227,4 +227,30 @@ export const backendService = {
       method: "DELETE",
     });
   },
+
+  async exportBackup(): Promise<any> {
+    const res = await fetch("/api/backup/export");
+    if (!res.ok) throw new Error("Failed to export backup");
+    return await res.json();
+  },
+
+  async importBackup(backupData: any): Promise<void> {
+    const res = await fetch("/api/backup/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(backupData),
+    });
+    if (!res.ok) {
+      let errMsg = "Failed to restore backup";
+      try {
+        const err = await res.json();
+        errMsg = err.error || errMsg;
+      } catch {
+        try {
+          errMsg = await res.text();
+        } catch {}
+      }
+      throw new Error(errMsg);
+    }
+  },
 };

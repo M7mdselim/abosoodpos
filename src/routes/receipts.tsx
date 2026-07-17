@@ -47,7 +47,8 @@ function ReceiptsPage() {
   const { session } = useSession();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "voided">("all");
-  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "2days" | "7days" | "30days" | "all">("2days");
+  const isCashier = session?.role === "cashier";
+  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "2days" | "7days" | "30days" | "all">(isCashier ? "all" : "2days");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "Cash" | "Card" | "Mixed">("all");
   const [cashierFilter, setCashierFilter] = useState<string>("all");
   const [carBrandFilter, setCarBrandFilter] = useState<string>("all");
@@ -199,7 +200,8 @@ function ReceiptsPage() {
             />
           </div>
 
-          {/* Second row: date filter + advanced toggle */}
+          {/* Second row: date filter + advanced toggle (hidden for cashiers) */}
+          {!isCashier && (
           <div className="flex gap-2">
             {/* Date range filter */}
             <div className="flex-1">
@@ -243,10 +245,11 @@ function ReceiptsPage() {
               )}
             </Button>
           </div>
+          )}
         </div>
 
         {/* Collapsible Advanced Filters Section */}
-        {showAdvancedFilters && (
+        {!isCashier && showAdvancedFilters && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-white/5 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
             {/* Status Filter */}
             <div className="space-y-1 text-right" dir="rtl">

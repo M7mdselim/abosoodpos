@@ -6,7 +6,7 @@ dotenv.config();
 const { Pool } = pg;
 
 // Use Pool to manage standard database connections
-const pool = new Pool({
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false, // Required for DB SSL connections

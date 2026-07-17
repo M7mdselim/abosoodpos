@@ -69,25 +69,16 @@ function ShiftsPage() {
   const history = useMemo(() => {
     const shifts = shiftService.getShifts();
     if (session?.role === "cashier") {
-      const getLocalDateString = (offsetDays = 0) => {
-        const date = new Date();
-        date.setDate(date.getDate() - offsetDays);
-        const yyyy = date.getFullYear();
-        const mm = String(date.getMonth() + 1).padStart(2, '0');
-        const dd = String(date.getDate()).padStart(2, '0');
-        return `${yyyy}-${mm}-${dd}`;
-      };
-      const today = getLocalDateString(0);
-      const yesterday = getLocalDateString(1);
-
-      return shifts.filter((s) => {
-        const isOwnShift = s.cashierId === session?.id;
-        if (!isOwnShift) return false;
-        
-        const isTodayOrYesterday = s.shiftDay === today || s.shiftDay === yesterday;
-        const isOpen = s.status === "open";
-        
-        return isTodayOrYesterday || isOpen;
+      // Cashier sees: any active shift + the system's last closed shift (regardless of cashier)
+      const activeShifts = shifts.filter((s) => s.status === "open");
+      const closedShifts = shifts.filter((s) => s.status === "closed");
+      const lastClosed = closedShifts.length > 0 ? [closedShifts[0]] : [];
+      
+      const ids = new Set<string>();
+      return [...activeShifts, ...lastClosed].filter((s) => {
+        if (ids.has(s.id)) return false;
+        ids.add(s.id);
+        return true;
       });
     }
     return shifts;
@@ -1107,7 +1098,7 @@ function ShiftSalesPrintDialog({
             <div className="text-sm font-extrabold">{settings.companyNameAr}</div>
             <div className="text-[10px] text-black/70">{settings.sloganAr}</div>
             <div className="text-[11px] font-black mt-1.5 border border-black/20 py-0.5 rounded bg-black/5 text-center">
-              تقرير المبيعات المنفذة
+              تقرير الأصناف المباعة
             </div>
           </div>
 
@@ -1121,88 +1112,47 @@ function ShiftSalesPrintDialog({
             <span className="text-left">{shift.cashierName}</span>
             <span className="text-black/60">عدد الفواتير:</span>
             <span className="text-left font-bold">{shiftSales.length}</span>
+            <span className="text-black/60">عدد الأصناف:</span>
+            <span className="text-left font-bold">{aggregatedItems.length}</span>
             <span className="text-black/60">تاريخ الطباعة:</span>
             <span className="text-left">{new Date().toLocaleString("ar-EG")}</span>
           </div>
 
           <div className="border-t border-dashed border-black/50 my-1.5" />
 
-          {/* Aggregated Items Table */}
-          <div className="text-[10px] font-bold mb-0.5">📦 المنتجات المباعة (مجمعة)</div>
+          {/* Aggregated Items Table — Products & Quantities ONLY, no prices */}
+          <div className="text-[10px] font-bold mb-0.5">📦 الأصناف المباعة (مجمعة)</div>
           {aggregatedItems.length === 0 ? (
             <div className="text-[10px] text-black/50 text-center py-2">لا توجد مبيعات في هذه الوردية</div>
           ) : (
             <table className="w-full text-[9.5px] border-collapse">
               <thead>
                 <tr className="border-b border-black/30">
-                  <th className="text-right py-0.5 font-bold">المنتج</th>
-                  <th className="text-center py-0.5 font-bold w-8">الكمية</th>
-                  <th className="text-left py-0.5 font-bold">الإجمالي</th>
+                  <th className="text-right py-0.5 font-bold">#</th>
+                  <th className="text-right py-0.5 font-bold">الصنف</th>
+                  <th className="text-center py-0.5 font-bold w-12">الكمية</th>
                 </tr>
               </thead>
               <tbody>
                 {aggregatedItems.map((item, i) => (
                   <tr key={i} className="border-b border-black/10">
+                    <td className="py-0.5 text-right text-black/50 w-6">{i + 1}</td>
                     <td className="py-0.5 leading-tight text-right">
                       <div className="font-semibold">{item.name}</div>
-                      <div className="text-black/50">{item.brand}</div>
+                      {item.brand && <div className="text-black/50">{item.brand}</div>}
                     </td>
                     <td className="text-center py-0.5 font-bold">{item.qty}</td>
-                    <td className="text-left py-0.5 font-semibold">{formatCurrency(item.total)}</td>
                   </tr>
                 ))}
               </tbody>
-            </table>
-          )}
-
-          <div className="border-t border-dashed border-black/50 my-1.5" />
-
-          {/* Invoices List */}
-          <div className="text-[10px] font-bold mb-0.5">🧾 قائمة الفواتير</div>
-          {shiftSales.length === 0 ? (
-            <div className="text-[10px] text-black/50 text-center py-1">لا توجد فواتير</div>
-          ) : (
-            <table className="w-full text-[9px] border-collapse">
-              <thead>
-                <tr className="border-b border-black/30 text-right">
-                  <th className="text-right py-0.5 font-bold">رقم الفاتورة</th>
-                  <th className="text-right py-0.5 font-bold">العميل</th>
-                  <th className="text-center py-0.5 font-bold">الدفع</th>
-                  <th className="text-left py-0.5 font-bold">الإجمالي</th>
+              <tfoot>
+                <tr className="border-t border-black/30">
+                  <td colSpan={2} className="py-0.5 text-right font-bold">إجمالي الكميات:</td>
+                  <td className="text-center py-0.5 font-black">{aggregatedItems.reduce((s, it) => s + it.qty, 0)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {shiftSales.map((inv) => (
-                  <tr key={inv.id} className="border-b border-black/10">
-                    <td className="py-0.5 font-mono text-[8.5px] text-right">#{inv.invoiceNumber.replace("INV-", "")}</td>
-                    <td className="py-0.5 text-right">{inv.customerName}</td>
-                    <td className="text-center py-0.5">
-                      {inv.paymentMethod === "Cash" ? "نقدي" : inv.paymentMethod === "Card" ? "كارت" : "مختلط"}
-                    </td>
-                    <td className="text-left py-0.5 font-semibold">{formatCurrency(inv.total)}</td>
-                  </tr>
-                ))}
-              </tbody>
+              </tfoot>
             </table>
           )}
-
-          <div className="border-t border-dashed border-black/50 my-1.5" />
-
-          {/* Summary Totals */}
-          <div className="space-y-0.5 text-[10px]">
-            <div className="flex justify-between">
-              <span className="text-black/70">إجمالي نقدي (كاش):</span>
-              <span className="font-semibold">{formatCurrency(cashTotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-black/70">إجمالي فيزا/كارت:</span>
-              <span className="font-semibold">{formatCurrency(cardTotal)}</span>
-            </div>
-            <div className="flex justify-between font-bold border-t border-black/30 pt-1">
-              <span>الإجمالي الكلي للوردية:</span>
-              <span>{formatCurrency(grandTotal)}</span>
-            </div>
-          </div>
         </div>
 
         <DialogFooter className="gap-1.5 mt-2">
@@ -1223,7 +1173,7 @@ function ShiftSalesPrintDialog({
             <div className="text-sm font-extrabold">{settings.companyNameAr}</div>
             <div className="text-[10px] text-black/70">{settings.sloganAr}</div>
             <div className="text-[11px] font-black mt-1.5 border border-black/20 py-0.5 rounded bg-black/5 text-center">
-              تقرير المبيعات المنفذة
+              تقرير الأصناف المباعة
             </div>
           </div>
 
@@ -1237,88 +1187,47 @@ function ShiftSalesPrintDialog({
             <div className="text-left">{shift.cashierName}</div>
             <div><b>عدد الفواتير:</b></div>
             <div className="text-left font-bold">{shiftSales.length}</div>
+            <div><b>عدد الأصناف:</b></div>
+            <div className="text-left font-bold">{aggregatedItems.length}</div>
             <div><b>تاريخ الطباعة:</b></div>
             <div className="text-left">{new Date().toLocaleString("ar-EG")}</div>
           </div>
 
           <div className="my-2 border-t border-dashed border-black" />
 
-          {/* Aggregated Items Table */}
-          <div className="text-[10px] font-bold mb-1">📦 المنتجات المباعة (مجمعة)</div>
+          {/* Aggregated Items Table — items only, no prices */}
+          <div className="text-[10px] font-bold mb-1">📦 الأصناف المباعة (مجمعة)</div>
           {aggregatedItems.length === 0 ? (
             <div className="text-[10px] text-black/50 text-center py-2">لا توجد مبيعات في هذه الوردية</div>
           ) : (
             <table className="w-full text-[9.5px] border-collapse mb-1">
               <thead>
                 <tr className="border-b border-black text-right font-bold">
-                  <th className="text-right py-0.5 w-[50%]">المنتج</th>
-                  <th className="text-center py-0.5 w-[20%]">الكمية</th>
-                  <th className="text-left py-0.5 w-[30%]">الإجمالي</th>
+                  <th className="text-right py-0.5 w-[10%]">#</th>
+                  <th className="text-right py-0.5 w-[65%]">الصنف</th>
+                  <th className="text-center py-0.5 w-[25%]">الكمية</th>
                 </tr>
               </thead>
               <tbody>
                 {aggregatedItems.map((item, i) => (
                   <tr key={i} className="border-b border-dashed border-black/20">
+                    <td className="py-0.5 text-right text-black/50">{i + 1}</td>
                     <td className="py-0.5 text-right">
                       <div className="font-semibold">{item.name}</div>
-                      <div className="text-[8.5px] text-black/50">{item.brand}</div>
+                      {item.brand && <div className="text-[8.5px] text-black/50">{item.brand}</div>}
                     </td>
-                    <td className="text-center py-0.5">{item.qty}</td>
-                    <td className="text-left font-bold">{formatCurrency(item.total)}</td>
+                    <td className="text-center py-0.5 font-bold">{item.qty}</td>
                   </tr>
                 ))}
               </tbody>
-            </table>
-          )}
-
-          <div className="my-2 border-t border-dashed border-black" />
-
-          {/* Invoices List */}
-          <div className="text-[10px] font-bold mb-1">🧾 قائمة الفواتير</div>
-          {shiftSales.length === 0 ? (
-            <div className="text-[10px] text-black/50 text-center py-1">لا توجد فواتير</div>
-          ) : (
-            <table className="w-full text-[9px] border-collapse mb-1">
-              <thead>
-                <tr className="border-b border-black text-right font-bold">
-                  <th className="text-right py-0.5 w-[30%]">رقم الفاتورة</th>
-                  <th className="text-right py-0.5 w-[35%]">العميل</th>
-                  <th className="text-center py-0.5 w-[15%]">الدفع</th>
-                  <th className="text-left py-0.5 w-[20%]">الإجمالي</th>
+              <tfoot>
+                <tr className="border-t border-black">
+                  <td colSpan={2} className="py-0.5 text-right font-bold">إجمالي الكميات:</td>
+                  <td className="text-center py-0.5 font-black">{aggregatedItems.reduce((s, it) => s + it.qty, 0)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {shiftSales.map((inv) => (
-                  <tr key={inv.id} className="border-b border-dashed border-black/20">
-                    <td className="py-0.5 font-mono text-[8.5px] text-right">#{inv.invoiceNumber.replace("INV-", "")}</td>
-                    <td className="py-0.5 text-right">{inv.customerName}</td>
-                    <td className="text-center py-0.5">
-                      {inv.paymentMethod === "Cash" ? "نقدي" : inv.paymentMethod === "Card" ? "كارت" : "مختلط"}
-                    </td>
-                    <td className="text-left font-bold">{formatCurrency(inv.total)}</td>
-                  </tr>
-                ))}
-              </tbody>
+              </tfoot>
             </table>
           )}
-
-          <div className="my-2 border-t border-dashed border-black" />
-
-          {/* Summary Totals */}
-          <div className="space-y-1 text-[10px] text-black">
-            <div className="flex justify-between">
-              <span>إجمالي نقدي (كاش):</span>
-              <span>{formatCurrency(cashTotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>إجمالي فيزا/كارت:</span>
-              <span>{formatCurrency(cardTotal)}</span>
-            </div>
-            <div className="flex justify-between font-bold border-t border-black/30 pt-1">
-              <span>الإجمالي الكلي للوردية:</span>
-              <span>{formatCurrency(grandTotal)}</span>
-            </div>
-          </div>
         </div>,
         document.body
       )}

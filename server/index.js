@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import fs from "fs";
-import { query, initDb } from "./db.js";
+import { query, initDb, pool } from "./db.js";
 
 dotenv.config(); // Reload backend configuration
 
@@ -798,6 +798,129 @@ app.post("/api/settings", async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ----------------------------------------------------
+// 8. BACKUP & RESTORE ENDPOINTS
+// ----------------------------------------------------
+app.get("/api/backup/export", async (req, res) => {
+  try {
+    const tables = [
+      "users",
+      "products",
+      "customers",
+      "customer_cars",
+      "register_shifts",
+      "sales",
+      "sale_items",
+      "user_logs",
+      "settings"
+    ];
+    const backupData = {};
+    for (const table of tables) {
+      const result = await query(`SELECT * FROM ${table}`);
+      backupData[table] = result.rows;
+    }
+    
+    res.setHeader("Content-Type", "application/json");
+    res.json(backupData);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to generate backup: " + err.message });
+  }
+});
+
+app.post("/api/backup/import", async (req, res) => {
+  const backupData = req.body;
+  if (!backupData || typeof backupData !== "object" || !backupData.users || !backupData.products) {
+    return res.status(400).json({ error: "ملف النسخة الاحتياطية غير صالح" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // 1. Delete all tables sequentially to respect foreign key constraints
+    await client.query('DELETE FROM "customer_cars"');
+    await client.query('DELETE FROM "sale_items"');
+    await client.query('DELETE FROM "sales"');
+    await client.query('DELETE FROM "register_shifts"');
+    await client.query('DELETE FROM "customers"');
+    await client.query('DELETE FROM "products"');
+    await client.query('DELETE FROM "users"');
+    await client.query('DELETE FROM "user_logs"');
+    await client.query('DELETE FROM "settings"');
+
+    // 2. Restore tables in specific order to satisfy foreign key constraints
+    const restoreOrder = [
+      "users",
+      "settings",
+      "products",
+      "customers",
+      "customer_cars",
+      "register_shifts",
+      "sales",
+      "sale_items",
+      "user_logs"
+    ];
+
+    for (const tableName of restoreOrder) {
+      const rows = backupData[tableName];
+      if (rows && rows.length > 0) {
+        // Build and execute bulk insert
+        const columns = Object.keys(rows[0]);
+        const columnNames = columns.map(c => `"${c}"`).join(", "); // wrap in quotes to prevent reserved word issues
+        
+        // Chunk inserts to prevent exceeding PostgreSQL parameter limits (65,535 parameters)
+        const maxParams = 30000;
+        const paramsPerRow = columns.length;
+        const rowsPerChunk = Math.floor(maxParams / paramsPerRow);
+        
+        for (let i = 0; i < rows.length; i += rowsPerChunk) {
+          const chunk = rows.slice(i, i + rowsPerChunk);
+          const valuePlaceholders = [];
+          const values = [];
+          let paramIndex = 1;
+
+          for (const row of chunk) {
+            const rowPlaceholders = [];
+            for (const col of columns) {
+              rowPlaceholders.push(`$${paramIndex++}`);
+              let val = row[col];
+              if (val !== null && typeof val === "object") {
+                val = JSON.stringify(val);
+              }
+              values.push(val);
+            }
+            valuePlaceholders.push(`(${rowPlaceholders.join(", ")})`);
+          }
+
+          const queryText = `INSERT INTO "${tableName}" (${columnNames}) VALUES ${valuePlaceholders.join(", ")}`;
+          await client.query(queryText, values);
+        }
+      }
+    }
+
+    // 3. Reset the auto-increment sequence for sale_items robustly
+    try {
+      const maxIdRes = await client.query('SELECT COALESCE(max(id), 0) as max_id FROM "sale_items"');
+      const nextId = Number(maxIdRes.rows[0].max_id) + 1;
+      await client.query(`ALTER SEQUENCE "sale_items_id_seq" RESTART WITH ${nextId}`);
+    } catch (seqErr) {
+      console.warn("Could not reset sequence sale_items_id_seq:", seqErr.message);
+    }
+
+    await client.query("COMMIT");
+    
+    // Invalidate all cache elements
+    invalidateCache();
+    
+    res.json({ success: true });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    res.status(500).json({ error: "Failed to restore backup: " + err.message });
+  } finally {
+    client.release();
   }
 });
 

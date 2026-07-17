@@ -107,6 +107,27 @@ function DeveloperControlsPage() {
     setShiftTick((t) => t + 1);
   };
 
+  const handleToggleShiftStatus = (shiftId: string) => {
+    const shifts = shiftService.getShifts();
+    const index = shifts.findIndex((s) => s.id === shiftId);
+    if (index === -1) {
+      toast.error("لم يتم العثور على الوردية");
+      return;
+    }
+    const oldStatus = shifts[index].status;
+    const newStatus = oldStatus === "open" ? "closed" : "open";
+    shifts[index].status = newStatus;
+    if (newStatus === "closed" && !shifts[index].closedAt) {
+      shifts[index].closedAt = new Date().toISOString();
+    }
+    if (newStatus === "open") {
+      shifts[index].closedAt = undefined as any;
+    }
+    shiftService.saveShifts(shifts);
+    toast.success(`تم تغيير حالة الوردية من "${oldStatus === "open" ? "نشطة" : "مغلقة"}" إلى "${newStatus === "open" ? "نشطة" : "مغلقة"}"`);
+    setShiftTick((t) => t + 1);
+  };
+
 
   const handleToggleVat = (checked: boolean) => {
     setVatEnabled(checked);
@@ -945,13 +966,17 @@ function DeveloperControlsPage() {
                               )}
                             </td>
                             <td className="px-4 py-2.5">
-                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                                s.status === "open"
-                                  ? "bg-emerald-500/10 text-emerald-600"
-                                  : "bg-muted text-muted-foreground"
-                              }`}>
-                                {s.status === "open" ? "نشطة" : "مغلقة"}
-                              </span>
+                              <button
+                                onClick={() => handleToggleShiftStatus(s.id)}
+                                title="اضغط لتغيير الحالة"
+                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold cursor-pointer transition-all hover:scale-105 hover:shadow-sm ${
+                                  s.status === "open"
+                                    ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
+                                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                }`}
+                              >
+                                {s.status === "open" ? "نشطة ↻" : "مغلقة ↻"}
+                              </button>
                             </td>
                             <td className="px-4 py-2.5">
                               {editingShiftId !== s.id && (

@@ -121,6 +121,9 @@ function UserLogsPage() {
   // ── filtered logs ──
   const filteredLogs = useMemo(() => {
     return allLogs.filter((log) => {
+      // Never show developer logs in audit
+      if (log.userRole === "developer") return false;
+
       const ts = new Date(log.timestamp).getTime();
       if (ts < dateBounds.from || ts > dateBounds.to) return false;
       if (roleFilter !== "all" && log.userRole !== roleFilter) return false;
@@ -137,7 +140,7 @@ function UserLogsPage() {
       }
       return true;
     });
-  }, [allLogs, dateBounds, roleFilter, actionFilter, userFilter, searchTerm]);
+  }, [allLogs, dateBounds, roleFilter, actionFilter, userFilter, searchTerm, session]);
 
   // reset to page 1 on any filter change
   useEffect(() => {
@@ -314,7 +317,9 @@ function UserLogsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">كل الصلاحيات</SelectItem>
-                    <SelectItem value="developer">مطور النظام</SelectItem>
+                    {session?.role === "developer" && (
+                      <SelectItem value="developer">مطور النظام</SelectItem>
+                    )}
                     <SelectItem value="admin">المدير</SelectItem>
                     <SelectItem value="cashier">كاشير</SelectItem>
                   </SelectContent>

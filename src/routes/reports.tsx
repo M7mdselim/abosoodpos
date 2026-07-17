@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Fragment } from "react";
 import { createPortal } from "react-dom";
-import { Printer, Download, FileSpreadsheet, FileText, CalendarDays, RefreshCw, Eye, Pencil, Filter, X } from "lucide-react";
+import { Printer, Download, FileSpreadsheet, FileText, CalendarDays, RefreshCw, Eye, Pencil, Filter, X, ChevronDown, ChevronLeft } from "lucide-react";
 import { ReceiptViewDialog } from "./receipts";
 import type { Sale } from "@/types";
 
@@ -200,35 +200,36 @@ function DailyReport() {
 
   // Apply filters
   const sales = useMemo(() => {
-    return allSales.filter(s => {
+    return (allSales || []).filter(s => {
+      if (!s) return false;
       if (s.status === "voided") return false;
 
       // General Search: Customer or Invoice number
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        const invoiceNum = s.invoiceNumber.replace("INV-", "").toLowerCase();
-        const customer = s.customerName.toLowerCase();
+        const invoiceNum = (s.invoiceNumber || "").replace("INV-", "").toLowerCase();
+        const customer = (s.customerName || "").toLowerCase();
         if (!invoiceNum.includes(query) && !customer.includes(query)) {
           return false;
         }
       }
 
       // Cashier filter
-      if (selectedCashier !== "all" && s.cashierName !== selectedCashier) {
+      if (selectedCashier !== "all" && (s.cashierName || "") !== selectedCashier) {
         return false;
       }
 
       // Payment Method filter
-      if (selectedPayment !== "all" && s.paymentMethod !== selectedPayment) {
+      if (selectedPayment !== "all" && (s.paymentMethod || "") !== selectedPayment) {
         return false;
       }
 
       // Product/Brand filter
       if (productQuery) {
         const pQuery = productQuery.toLowerCase();
-        const hasProduct = s.items.some(item => 
-          item.name.toLowerCase().includes(pQuery) || 
-          (item.brand && item.brand.toLowerCase().includes(pQuery))
+        const hasProduct = (s.items || []).some(item => 
+          (item.name || "").toLowerCase().includes(pQuery) || 
+          (item.brand && (item.brand || "").toLowerCase().includes(pQuery))
         );
         if (!hasProduct) return false;
       }
@@ -266,12 +267,12 @@ function DailyReport() {
   const handleExportExcel = () => {
     const headers = ["رقم الفاتورة", "وقت العملية", "اسم العميل", "الكاشير", "طريقة الدفع", "الإجمالي ج.م"];
     const rows = sales.map((s) => [
-      `#${s.invoiceNumber.replace("INV-", "")}`,
-      new Date(s.date).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }),
-      s.customerName,
-      s.cashierName,
+      `#${(s.invoiceNumber || "").replace("INV-", "")}`,
+      s.date ? new Date(s.date).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }) : "",
+      s.customerName || "",
+      s.cashierName || "",
       s.paymentMethod === "Cash" ? "نقدي" : "فيزا / كارت",
-      Number(s.total || 0).toFixed(0)
+      Number(s.total || 0).toFixed(2)
     ]);
     exportExcel(`تقرير-يومي-${date}.csv`, headers, rows);
   };
@@ -475,10 +476,10 @@ function DailyReport() {
           <TableBody>
             {sales.map((s) => (
               <TableRow key={s.id}>
-                <TableCell className="font-mono text-xs font-semibold text-right">#{s.invoiceNumber.replace("INV-", "")}</TableCell>
-                <TableCell className="text-right">{new Date(s.date).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}</TableCell>
-                <TableCell className="font-bold text-right">{s.customerName}</TableCell>
-                <TableCell className="text-right">{s.cashierName}</TableCell>
+                <TableCell className="font-mono text-xs font-semibold text-right">#{(s.invoiceNumber || "").replace("INV-", "")}</TableCell>
+                <TableCell className="text-right">{s.date ? new Date(s.date).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }) : ""}</TableCell>
+                <TableCell className="font-bold text-right">{s.customerName || ""}</TableCell>
+                <TableCell className="text-right">{s.cashierName || ""}</TableCell>
                 <TableCell className="text-right">{s.paymentMethod === "Cash" ? "نقدي" : "فيزا"}</TableCell>
                 <TableCell className="text-left font-black text-primary">{formatCurrency(Number(s.total || 0))}</TableCell>
                 <TableCell className="text-left no-print">
@@ -547,6 +548,15 @@ function DailyReport() {
 function MonthlyReport() {
   const { session } = useSession();
   const [month, setMonth] = useState(thisMonth());
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
+
+  const toggleDay = (day: string) => {
+    setExpandedDays(prev => ({
+      ...prev,
+      [day]: !prev[day]
+    }));
+  };
 
   // Much filters state hooks
   const [selectedCashier, setSelectedCashier] = useState("all");
@@ -561,33 +571,34 @@ function MonthlyReport() {
   // Extract unique cashiers from that month's sales dynamically
   const cashiers = useMemo(() => {
     const unique = new Set<string>();
-    allSales.forEach(s => {
-      if (s.cashierName) unique.add(s.cashierName);
+    (allSales || []).forEach(s => {
+      if (s && s.cashierName) unique.add(s.cashierName);
     });
     return Array.from(unique);
   }, [allSales]);
 
   // Apply filters
   const sales = useMemo(() => {
-    return allSales.filter(s => {
+    return (allSales || []).filter(s => {
+      if (!s) return false;
       if (s.status === "voided") return false;
 
       // Cashier filter
-      if (selectedCashier !== "all" && s.cashierName !== selectedCashier) {
+      if (selectedCashier !== "all" && (s.cashierName || "") !== selectedCashier) {
         return false;
       }
 
       // Payment Method filter
-      if (selectedPayment !== "all" && s.paymentMethod !== selectedPayment) {
+      if (selectedPayment !== "all" && (s.paymentMethod || "") !== selectedPayment) {
         return false;
       }
 
       // Product/Brand filter
       if (productQuery) {
         const pQuery = productQuery.toLowerCase();
-        const hasProduct = s.items.some(item => 
-          item.name.toLowerCase().includes(pQuery) || 
-          (item.brand && item.brand.toLowerCase().includes(pQuery))
+        const hasProduct = (s.items || []).some(item => 
+          (item.name || "").toLowerCase().includes(pQuery) || 
+          (item.brand && (item.brand || "").toLowerCase().includes(pQuery))
         );
         if (!hasProduct) return false;
       }
@@ -623,6 +634,7 @@ function MonthlyReport() {
   const byDay = useMemo(() => {
     const map = new Map<string, { count: number; sales: number; vat: number }>();
     for (const s of sales) {
+      if (!s || !s.date) continue;
       const day = s.date.split("T")[0];
       const cur = map.get(day) ?? { count: 0, sales: 0, vat: 0 };
       cur.count += 1;
@@ -642,9 +654,9 @@ function MonthlyReport() {
     const rows = byDay.map(([day, v]) => [
       day,
       v.count,
-      v.sales.toFixed(0),
-      v.vat.toFixed(0),
-      (v.sales - v.vat).toFixed(0)
+      v.sales.toFixed(2),
+      v.vat.toFixed(2),
+      (v.sales - v.vat).toFixed(2)
     ]);
     exportExcel(`تقرير-شهري-${month}.csv`, headers, rows);
   };
@@ -981,7 +993,7 @@ function ShiftsReport() {
                   <TableCell className="font-bold text-amber-700 font-mono text-right">{s.shiftDay}</TableCell>
                   <TableCell className="font-semibold text-right">{s.cashierName}</TableCell>
                   <TableCell className="text-xs text-muted-foreground text-right">
-                    {new Date(s.startTime).toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
+                    {s.startTime ? new Date(s.startTime).toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' }) : ""}
                   </TableCell>
                   <TableCell className="text-right">{formatCurrency(s.openingCash)}</TableCell>
                   <TableCell className="text-right">
