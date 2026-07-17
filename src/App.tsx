@@ -40,8 +40,8 @@ export default function App() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white font-sans" dir="rtl">
         <div className="flex flex-col items-center gap-4 max-w-sm px-6 text-center">
           <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
-          <h2 className="text-lg font-black tracking-wide text-amber-500">جاري المزامنة مع قاعدة البيانات (DB)...</h2>
-          <p className="text-xs text-slate-400">يرجى الانتظار بينما نقوم بمزامنة البيانات مع السحابة</p>
+          <h2 className="text-lg font-black tracking-wide text-amber-500">Loading...</h2>
+          <p className="text-xs text-slate-400">Please wait while we sync the data</p>
         </div>
       </div>
     );
