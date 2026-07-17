@@ -117,11 +117,11 @@ function DeveloperControlsPage() {
     const oldStatus = shifts[index].status;
     const newStatus = oldStatus === "open" ? "closed" : "open";
     shifts[index].status = newStatus;
-    if (newStatus === "closed" && !shifts[index].closedAt) {
-      shifts[index].closedAt = new Date().toISOString();
+    if (newStatus === "closed" && !shifts[index].endTime) {
+      shifts[index].endTime = new Date().toISOString();
     }
     if (newStatus === "open") {
-      shifts[index].closedAt = undefined as any;
+      shifts[index].endTime = undefined as any;
     }
     shiftService.saveShifts(shifts);
     toast.success(`تم تغيير حالة الوردية من "${oldStatus === "open" ? "نشطة" : "مغلقة"}" إلى "${newStatus === "open" ? "نشطة" : "مغلقة"}"`);

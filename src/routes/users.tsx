@@ -316,6 +316,12 @@ function UserFormDialog({
       return;
     }
 
+    // Check if trying to create or change to a developer user
+    if (role === "developer" && (!user || user.role !== "developer")) {
+      toast.error("لا يمكن تعيين دور مطور النظام للمستخدم");
+      return;
+    }
+
     const permissions: UserPermissions = {
       canDiscount,
       canOpenShift,
@@ -413,7 +419,10 @@ function UserFormDialog({
               <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
                 <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="developer">مطور النظام (Developer)</SelectItem>
+                  {/* Developer option is hidden because Admin can never create a Developer user account. The only developer user is the Selim user. */}
+                  {role === "developer" && (
+                    <SelectItem value="developer">مطور النظام (Developer)</SelectItem>
+                  )}
                   <SelectItem value="admin">مدير نظام (Admin)</SelectItem>
                   <SelectItem value="cashier">كاشير / موظف (Cashier)</SelectItem>
                 </SelectContent>

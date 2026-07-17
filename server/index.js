@@ -95,6 +95,9 @@ app.get("/api/users", async (req, res) => {
 
 app.post("/api/users", async (req, res) => {
   const { id, username, password, name, role, status, permissions } = req.body;
+  if (role === "developer") {
+    return res.status(400).json({ error: "لا يمكن إنشاء حساب مطور نظام جديد" });
+  }
   try {
     await query(
       `INSERT INTO users (id, username, password, name, role, status, permissions)
@@ -110,6 +113,19 @@ app.post("/api/users", async (req, res) => {
 app.put("/api/users/:id", async (req, res) => {
   const { id } = req.params;
   const { username, password, name, role, status, permissions } = req.body;
+  
+  if (role === "developer") {
+    try {
+      const existingUserResult = await query("SELECT role FROM users WHERE id = $1", [id]);
+      const existingUser = existingUserResult.rows[0];
+      if (!existingUser || existingUser.role !== "developer") {
+        return res.status(400).json({ error: "لا يمكن تعديل دور المستخدم إلى مطور نظام" });
+      }
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   try {
     await query(
       `UPDATE users

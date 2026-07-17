@@ -31,16 +31,10 @@ async function seed() {
     
     let adminUser = userCheck.rows.find(u => u.role === "admin");
     let cashierUser = userCheck.rows.find(u => u.role === "cashier");
-    let devUser = userCheck.rows.find(u => u.role === "developer");
 
-    if (!devUser) {
-      console.log("Seeding developer user...");
-      await client.query(`
-        INSERT INTO users (id, username, password, name, role, status, permissions)
-        VALUES ('u_dev_real', 'developer', 'dev123', 'مطور النظام', 'developer', 'active', NULL)
-      `);
-      devUser = { id: 'u_dev_real' };
-    }
+    // Clean up any developer users in DB to enforce "only 1 user which is Selim User"
+    console.log("Cleaning up developer users in DB...");
+    await client.query("DELETE FROM users WHERE role = 'developer'");
 
     if (!adminUser) {
       console.log("Seeding admin user...");
