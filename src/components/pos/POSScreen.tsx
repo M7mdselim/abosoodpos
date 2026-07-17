@@ -71,20 +71,8 @@ export function POSScreen() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [lastSale, setLastSale] = useState<ReturnType<typeof saleService.create> | null>(null);
   
-  const [directPrint, setDirectPrintState] = useState(() => {
-    return store.settings.directPrint ?? false;
-  });
+  const directPrint = store.settings.directPrint ?? false;
   const [isPrintingDirect, setIsPrintingDirect] = useState(false);
-
-  const setDirectPrint = (val: boolean) => {
-    setDirectPrintState(val);
-    const updated = {
-      ...store.settings,
-      directPrint: val,
-    };
-    store.settings = updated;
-    backendService.saveSettings(updated).catch((err) => console.error("Error saving direct print setting:", err));
-  };
 
   const phoneRef = useRef<HTMLInputElement>(null);
 
@@ -915,8 +903,6 @@ export function POSScreen() {
         onOpenChange={setCheckoutOpen}
         total={total}
         onConfirm={completeSale}
-        directPrint={directPrint}
-        setDirectPrint={setDirectPrint}
       />
 
     </div>
@@ -1589,15 +1575,11 @@ function CheckoutDialog({
   onOpenChange,
   total,
   onConfirm,
-  directPrint,
-  setDirectPrint,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   total: number;
   onConfirm: (method: PaymentMethod, cashAmount?: number, cardAmount?: number) => void;
-  directPrint: boolean;
-  setDirectPrint: (val: boolean) => void;
 }) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash");
   const [cashAmount, setCashAmount] = useState<number>(total);
@@ -1721,22 +1703,7 @@ function CheckoutDialog({
             </div>
           )}
 
-          {/* Direct Print Toggle Switch */}
-          <div className="flex items-center justify-between p-3 rounded-lg border border-border/80 bg-muted/30">
-            <div className="space-y-0.5 text-right">
-              <Label htmlFor="checkout-direct-print" className="font-bold text-xs">
-                الطباعة المباشرة للفاتورة
-              </Label>
-              <span className="text-[10px] text-muted-foreground block">
-                تخطي عرض الفاتورة والطباعة مباشرة فور تأكيد الدفع
-              </span>
-            </div>
-            <Switch
-              id="checkout-direct-print"
-              checked={directPrint}
-              onCheckedChange={setDirectPrint}
-            />
-          </div>
+
         </div>
         <DialogFooter className="gap-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>إلغاء</Button>
