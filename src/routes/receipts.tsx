@@ -534,8 +534,8 @@ function ReceiptsPage() {
 
       {/* Confirm void dialog */}
       <Dialog open={!!voidConfirmSale} onOpenChange={(o) => !o && setVoidConfirmSale(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="w-[95vw] sm:max-w-md" dir="rtl">
+          <DialogHeader className="text-right">
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" /> إلغاء الفاتورة وإرجاع المخزن
             </DialogTitle>
@@ -595,9 +595,9 @@ export function ReceiptViewDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="w-[95vw] max-w-md p-0 gap-0 overflow-hidden">
+        <DialogContent className="w-[95vw] sm:max-w-md p-0 gap-0 overflow-hidden" dir="rtl">
           {/* Sticky Header */}
-          <DialogHeader className="px-4 pt-4 pb-3 border-b border-border shrink-0">
+          <DialogHeader className="px-4 pt-4 pb-3 border-b border-border shrink-0 text-right">
             <DialogTitle className="text-sm font-black">فاتورة المبيعات التفصيلية</DialogTitle>
           </DialogHeader>
           {/* Scrollable Body */}

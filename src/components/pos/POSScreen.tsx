@@ -967,18 +967,18 @@ function NewCustomerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
+      <DialogContent className="w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogHeader className="text-right">
           <DialogTitle>تسجيل عميل جديد</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-3 py-2 text-left">
+        <div className="grid gap-3 py-2 text-right">
           <Field label="اسم العميل">
             <Input value={name} onChange={(e) => setName(e.target.value)} className="h-11" />
           </Field>
           <Field label="رقم الجوال">
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="h-11" />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="ماركة السيارة">
               <CarBrandSelector value={carBrand} onChange={setCarBrand} />
             </Field>
@@ -1046,11 +1046,11 @@ function AddCarDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="w-[95vw] sm:max-w-md" dir="rtl">
+        <DialogHeader className="text-right">
           <DialogTitle>إضافة سيارة جديدة للعميل: {customerName}</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-3 py-2 text-left">
+        <div className="grid gap-3 py-2 text-right">
           <Field label="ماركة السيارة">
             <CarBrandSelector value={brand} onChange={setBrand} />
           </Field>
@@ -1106,8 +1106,8 @@ function ReceiptDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] sm:max-w-sm p-4 max-h-[90vh] flex flex-col">
-          <DialogHeader className="pb-1 shrink-0">
+        <DialogContent className="w-[95vw] sm:max-w-sm p-4 max-h-[90vh] flex flex-col" dir="rtl">
+          <DialogHeader className="pb-1 shrink-0 text-right">
             <DialogTitle className={cn(
               "flex items-center gap-2 text-sm",
               isDraft ? "text-blue-600" : "text-green-600"
@@ -1635,7 +1635,7 @@ function CheckoutDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md" dir="rtl">
+      <DialogContent className="w-[95vw] sm:max-w-md" dir="rtl">
         <DialogHeader>
           <DialogTitle className="text-right">دفع وقبض الفاتورة</DialogTitle>
         </DialogHeader>

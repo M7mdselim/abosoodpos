@@ -108,8 +108,8 @@ function CustomerDetails({
 
   return (
     <Dialog open={!!customer} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
+      <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogHeader className="text-right">
           <DialogTitle>{customer.name}</DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-6">
