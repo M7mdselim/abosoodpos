@@ -1,5 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useSession } from "@/context/RoleContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { authService } from "@/services/authService";
@@ -675,20 +676,59 @@ function ShiftPrintDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md p-4" dir="rtl">
+      <DialogContent className="w-[95vw] sm:max-w-[360px] p-4 max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader className="pb-1 text-right">
           <DialogTitle className="text-sm">تقرير جرد الوردية (Spot Check)</DialogTitle>
         </DialogHeader>
 
         <style>{`
+          #receipt-print-only {
+            display: none;
+          }
           @media print {
-            body * { visibility: hidden; }
-            #shift-print-area, #shift-print-area * { visibility: visible; }
-            #shift-print-area {
-              position: absolute; left: 0; top: 0;
-              width: 80mm !important; padding: 4mm !important;
-              margin: 0 !important; border: none !important;
-              background: white !important; color: black !important;
+            @page {
+              size: ${settings.receiptWidth || 80}mm auto;
+              margin: 0 !important;
+            }
+            html, body {
+              width: ${settings.receiptWidth || 80}mm !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              overflow: visible !important;
+              height: auto !important;
+              background: white !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            #root,
+            [data-radix-portal],
+            body > *:not(#receipt-print-only) {
+              display: none !important;
+            }
+            #receipt-print-only {
+              display: block !important;
+              position: static !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              padding: 6mm ${settings.receiptMargin !== undefined ? settings.receiptMargin : 4}mm !important;
+              margin: 0 !important;
+              border: none !important;
+              box-shadow: none !important;
+              background: white !important;
+              direction: rtl !important;
+              font-family: monospace !important;
+              font-size: ${settings.receiptFontSize || 11}px !important;
+            }
+            #receipt-print-only * {
+              font-family: monospace !important;
+              color: black !important;
+              border-color: black !important;
+              opacity: 1 !important;
+            }
+            #receipt-print-only table,
+            #receipt-print-only td,
+            #receipt-print-only th {
+              border-color: black !important;
             }
           }
         `}</style>
@@ -700,7 +740,7 @@ function ShiftPrintDialog({
             )}
             <div className="text-sm font-extrabold">{settings.companyNameAr}</div>
             <div className="text-[10px] text-black/70">{settings.sloganAr}</div>
-            <div className="text-[11px] font-black mt-1.5 border border-black/20 py-0.5 rounded">
+            <div className="text-[11px] font-black mt-1.5 border border-black/20 py-0.5 rounded text-center bg-black/5">
               تقرير جرد الوردية (Spot Check)
             </div>
           </div>
@@ -709,17 +749,17 @@ function ShiftPrintDialog({
 
           <div className="grid grid-cols-2 gap-y-0.5 text-[10px]">
             <span className="text-black/60">يوم الوردية:</span>
-            <span className="text-right font-bold">{shift.shiftDay}</span>
+            <span className="text-left font-bold">{shift.shiftDay}</span>
             <span className="text-black/60">أمين الصندوق:</span>
-            <span className="text-right">{shift.cashierName}</span>
+            <span className="text-left">{shift.cashierName}</span>
             <span className="text-black/60">الحالة:</span>
-            <span className="text-right font-bold">{shift.status === "open" ? "نشطة (مفتوحة)" : "مغلقة"}</span>
+            <span className="text-left font-bold">{shift.status === "open" ? "نشطة (مفتوحة)" : "مغلقة"}</span>
             <span className="text-black/60">وقت البدء:</span>
-            <span className="text-right">{new Date(shift.startTime).toLocaleString("ar-EG")}</span>
+            <span className="text-left">{new Date(shift.startTime).toLocaleString("ar-EG")}</span>
             {shift.endTime && (
               <>
                 <span className="text-black/60">وقت الإغلاق:</span>
-                <span className="text-right">{new Date(shift.endTime).toLocaleString("ar-EG")}</span>
+                <span className="text-left">{new Date(shift.endTime).toLocaleString("ar-EG")}</span>
               </>
             )}
           </div>
@@ -781,7 +821,7 @@ function ShiftPrintDialog({
                 <tr className="border-b border-black/30">
                   <th className="text-right py-0.5 font-bold">المنتج</th>
                   <th className="text-center py-0.5 font-bold w-8">الكمية</th>
-                  <th className="text-right py-0.5 font-bold">الإجمالي</th>
+                  <th className="text-left py-0.5 font-bold">الإجمالي</th>
                 </tr>
               </thead>
               <tbody>
@@ -792,7 +832,7 @@ function ShiftPrintDialog({
                       <div className="text-[8px] text-black/50">{item.brand}</div>
                     </td>
                     <td className="text-center py-0.5 font-bold">{item.qty}</td>
-                    <td className="text-right py-0.5 font-semibold">{formatCurrency(item.total)}</td>
+                    <td className="text-left py-0.5 font-semibold">{formatCurrency(item.total)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -821,6 +861,130 @@ function ShiftPrintDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {open && typeof document !== "undefined" && createPortal(
+        <div id="receipt-print-only" dir="rtl" className="text-right">
+          <div className="text-center mb-2">
+            {settings.logoUrl && (
+              <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white" />
+            )}
+            <div className="text-sm font-extrabold">{settings.companyNameAr}</div>
+            <div className="text-[10px] text-black/70">{settings.sloganAr}</div>
+            <div className="text-[11px] font-black mt-1.5 border border-black/20 py-0.5 rounded text-center bg-black/5">
+              تقرير جرد الوردية (Spot Check)
+            </div>
+          </div>
+
+          <div className="my-2 border-t-2 border-dashed border-black" />
+
+          <div className="grid grid-cols-2 gap-y-1 text-[10px] text-black">
+            <div><b>يوم الوردية:</b></div>
+            <div className="text-left font-bold">{shift.shiftDay}</div>
+            <div><b>أمين الصندوق:</b></div>
+            <div className="text-left">{shift.cashierName}</div>
+            <div><b>الحالة:</b></div>
+            <div className="text-left font-bold">{shift.status === "open" ? "نشطة (مفتوحة)" : "مغلقة"}</div>
+            <div><b>وقت البدء:</b></div>
+            <div className="text-left">{new Date(shift.startTime).toLocaleString("ar-EG")}</div>
+            {shift.endTime && (
+              <>
+                <div><b>وقت الإغلاق:</b></div>
+                <div className="text-left">{new Date(shift.endTime).toLocaleString("ar-EG")}</div>
+              </>
+            )}
+          </div>
+
+          <div className="my-2 border-t border-dashed border-black" />
+
+          <div className="space-y-1 text-[10px] text-black">
+            <div className="flex justify-between">
+              <span>المبلغ الافتتاحي:</span>
+              <span>{formatCurrency(openingCash)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>مبيعات نقدي (كاش):</span>
+              <span>{formatCurrency(cashSalesTotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>مبيعات فيزا/كارت:</span>
+              <span>{formatCurrency(cardSalesTotal)}</span>
+            </div>
+            <div className="flex justify-between border-t border-black/20 pt-1 font-bold">
+              <span>إجمالي المبيعات:</span>
+              <span>{formatCurrency(salesTotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>عدد عمليات البيع:</span>
+              <span>{shift.salesCount ?? 0}</span>
+            </div>
+          </div>
+
+          <div className="my-2 border-t border-dashed border-black" />
+
+          <div className="space-y-1 text-[10px] text-black">
+            <div className="flex justify-between font-bold bg-black/5 px-1.5 py-1 rounded">
+              <span>النقدي المتوقع بالدرج:</span>
+              <span>{formatCurrency(expectedCash)}</span>
+            </div>
+            {actualCash !== null && (
+              <>
+                <div className="flex justify-between font-bold pt-0.5">
+                  <span>النقدي الفعلي بالدرج:</span>
+                  <span>{formatCurrency(actualCash)}</span>
+                </div>
+                <div className="flex justify-between font-bold border-t border-black/30 pt-1">
+                  <span>الفارق (عجز/زيادة):</span>
+                  <span>{variance! >= 0 ? "+" : ""}{formatCurrency(variance!)}</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Aggregated Sold Items */}
+          <div className="my-2 border-t border-dashed border-black" />
+          <div className="text-[10px] font-bold mb-1">📦 المنتجات المباعة في الوردية:</div>
+          {aggregatedItems.length === 0 ? (
+            <div className="text-[9px] text-black/50 text-center py-1">لا توجد مبيعات</div>
+          ) : (
+            <table className="w-full text-[9px] border-collapse mb-1">
+              <thead>
+                <tr className="border-b border-black text-right font-bold">
+                  <th className="text-right py-0.5 w-[50%]">المنتج</th>
+                  <th className="text-center py-0.5 w-[20%]">الكمية</th>
+                  <th className="text-left py-0.5 w-[30%]">الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody>
+                {aggregatedItems.map((item, i) => (
+                  <tr key={i} className="border-b border-dashed border-black/20">
+                    <td className="py-0.5 text-right">
+                      <div>{item.name}</div>
+                      <div className="text-[8px] text-black/50">{item.brand}</div>
+                    </td>
+                    <td className="text-center py-0.5">{item.qty}</td>
+                    <td className="text-left font-bold">{formatCurrency(item.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {shift.notes && (
+            <>
+              <div className="my-2 border-t border-dashed border-black" />
+              <div className="text-[9px] leading-normal text-black">
+                <b>ملاحظات:</b> {shift.notes}
+              </div>
+            </>
+          )}
+
+          <div className="my-2 border-t border-dashed border-black" />
+          <div className="text-center text-[9px] text-black font-bold">
+            تاريخ الطباعة: {new Date().toLocaleString("ar-EG")}
+          </div>
+        </div>,
+        document.body
+      )}
     </Dialog>
   );
 }
@@ -874,7 +1038,7 @@ function ShiftSalesPrintDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-xl p-4 max-h-[90vh] overflow-y-auto" dir="rtl">
+      <DialogContent className="w-[95vw] sm:max-w-[420px] p-4 max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader className="pb-1 text-right">
           <DialogTitle className="text-sm flex items-center gap-2">
             <FileText className="h-4 w-4 text-sky-600" />
@@ -883,14 +1047,53 @@ function ShiftSalesPrintDialog({
         </DialogHeader>
 
         <style>{`
+          #receipt-print-only {
+            display: none;
+          }
           @media print {
-            body * { visibility: hidden; }
-            #sales-print-area, #sales-print-area * { visibility: visible; }
-            #sales-print-area {
-              position: absolute; left: 0; top: 0;
-              width: 80mm !important; padding: 4mm !important;
-              margin: 0; border: none !important;
-              background: white !important; color: black !important;
+            @page {
+              size: ${settings.receiptWidth || 80}mm auto;
+              margin: 0 !important;
+            }
+            html, body {
+              width: ${settings.receiptWidth || 80}mm !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              overflow: visible !important;
+              height: auto !important;
+              background: white !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            #root,
+            [data-radix-portal],
+            body > *:not(#receipt-print-only) {
+              display: none !important;
+            }
+            #receipt-print-only {
+              display: block !important;
+              position: static !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              padding: 6mm ${settings.receiptMargin !== undefined ? settings.receiptMargin : 4}mm !important;
+              margin: 0 !important;
+              border: none !important;
+              box-shadow: none !important;
+              background: white !important;
+              direction: rtl !important;
+              font-family: monospace !important;
+              font-size: ${settings.receiptFontSize || 11}px !important;
+            }
+            #receipt-print-only * {
+              font-family: monospace !important;
+              color: black !important;
+              border-color: black !important;
+              opacity: 1 !important;
+            }
+            #receipt-print-only table,
+            #receipt-print-only td,
+            #receipt-print-only th {
+              border-color: black !important;
             }
           }
         `}</style>
@@ -903,7 +1106,7 @@ function ShiftSalesPrintDialog({
             )}
             <div className="text-sm font-extrabold">{settings.companyNameAr}</div>
             <div className="text-[10px] text-black/70">{settings.sloganAr}</div>
-            <div className="text-[11px] font-black mt-1.5 border border-black/20 py-0.5 rounded">
+            <div className="text-[11px] font-black mt-1.5 border border-black/20 py-0.5 rounded bg-black/5 text-center">
               تقرير المبيعات المنفذة
             </div>
           </div>
@@ -913,13 +1116,13 @@ function ShiftSalesPrintDialog({
           {/* Shift Info */}
           <div className="grid grid-cols-2 gap-y-0.5 text-[10px] mb-1">
             <span className="text-black/60">يوم الوردية:</span>
-            <span className="text-right font-bold">{shift.shiftDay}</span>
+            <span className="text-left font-bold">{shift.shiftDay}</span>
             <span className="text-black/60">أمين الصندوق:</span>
-            <span className="text-right">{shift.cashierName}</span>
+            <span className="text-left">{shift.cashierName}</span>
             <span className="text-black/60">عدد الفواتير:</span>
-            <span className="text-right font-bold">{shiftSales.length}</span>
+            <span className="text-left font-bold">{shiftSales.length}</span>
             <span className="text-black/60">تاريخ الطباعة:</span>
-            <span className="text-right">{new Date().toLocaleString("ar-EG")}</span>
+            <span className="text-left">{new Date().toLocaleString("ar-EG")}</span>
           </div>
 
           <div className="border-t border-dashed border-black/50 my-1.5" />
@@ -934,18 +1137,18 @@ function ShiftSalesPrintDialog({
                 <tr className="border-b border-black/30">
                   <th className="text-right py-0.5 font-bold">المنتج</th>
                   <th className="text-center py-0.5 font-bold w-8">الكمية</th>
-                  <th className="text-right py-0.5 font-bold">الإجمالي</th>
+                  <th className="text-left py-0.5 font-bold">الإجمالي</th>
                 </tr>
               </thead>
               <tbody>
                 {aggregatedItems.map((item, i) => (
                   <tr key={i} className="border-b border-black/10">
-                    <td className="py-0.5 leading-tight">
+                    <td className="py-0.5 leading-tight text-right">
                       <div className="font-semibold">{item.name}</div>
                       <div className="text-black/50">{item.brand}</div>
                     </td>
                     <td className="text-center py-0.5 font-bold">{item.qty}</td>
-                    <td className="text-right py-0.5 font-semibold">{formatCurrency(item.total)}</td>
+                    <td className="text-left py-0.5 font-semibold">{formatCurrency(item.total)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -961,22 +1164,22 @@ function ShiftSalesPrintDialog({
           ) : (
             <table className="w-full text-[9px] border-collapse">
               <thead>
-                <tr className="border-b border-black/30">
+                <tr className="border-b border-black/30 text-right">
                   <th className="text-right py-0.5 font-bold">رقم الفاتورة</th>
                   <th className="text-right py-0.5 font-bold">العميل</th>
                   <th className="text-center py-0.5 font-bold">الدفع</th>
-                  <th className="text-right py-0.5 font-bold">الإجمالي</th>
+                  <th className="text-left py-0.5 font-bold">الإجمالي</th>
                 </tr>
               </thead>
               <tbody>
                 {shiftSales.map((inv) => (
                   <tr key={inv.id} className="border-b border-black/10">
-                    <td className="py-0.5 font-mono text-[8.5px]">#{inv.invoiceNumber.replace("INV-", "")}</td>
-                    <td className="py-0.5">{inv.customerName}</td>
+                    <td className="py-0.5 font-mono text-[8.5px] text-right">#{inv.invoiceNumber.replace("INV-", "")}</td>
+                    <td className="py-0.5 text-right">{inv.customerName}</td>
                     <td className="text-center py-0.5">
                       {inv.paymentMethod === "Cash" ? "نقدي" : inv.paymentMethod === "Card" ? "كارت" : "مختلط"}
                     </td>
-                    <td className="text-right py-0.5 font-semibold">{formatCurrency(inv.total)}</td>
+                    <td className="text-left py-0.5 font-semibold">{formatCurrency(inv.total)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1009,6 +1212,116 @@ function ShiftSalesPrintDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {open && typeof document !== "undefined" && createPortal(
+        <div id="receipt-print-only" dir="rtl" className="text-right">
+          {/* Header */}
+          <div className="text-center mb-2">
+            {settings.logoUrl && (
+              <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white" />
+            )}
+            <div className="text-sm font-extrabold">{settings.companyNameAr}</div>
+            <div className="text-[10px] text-black/70">{settings.sloganAr}</div>
+            <div className="text-[11px] font-black mt-1.5 border border-black/20 py-0.5 rounded bg-black/5 text-center">
+              تقرير المبيعات المنفذة
+            </div>
+          </div>
+
+          <div className="my-2 border-t-2 border-dashed border-black" />
+
+          {/* Shift Info */}
+          <div className="grid grid-cols-2 gap-y-1 text-[10px] text-black">
+            <div><b>يوم الوردية:</b></div>
+            <div className="text-left font-bold">{shift.shiftDay}</div>
+            <div><b>أمين الصندوق:</b></div>
+            <div className="text-left">{shift.cashierName}</div>
+            <div><b>عدد الفواتير:</b></div>
+            <div className="text-left font-bold">{shiftSales.length}</div>
+            <div><b>تاريخ الطباعة:</b></div>
+            <div className="text-left">{new Date().toLocaleString("ar-EG")}</div>
+          </div>
+
+          <div className="my-2 border-t border-dashed border-black" />
+
+          {/* Aggregated Items Table */}
+          <div className="text-[10px] font-bold mb-1">📦 المنتجات المباعة (مجمعة)</div>
+          {aggregatedItems.length === 0 ? (
+            <div className="text-[10px] text-black/50 text-center py-2">لا توجد مبيعات في هذه الوردية</div>
+          ) : (
+            <table className="w-full text-[9.5px] border-collapse mb-1">
+              <thead>
+                <tr className="border-b border-black text-right font-bold">
+                  <th className="text-right py-0.5 w-[50%]">المنتج</th>
+                  <th className="text-center py-0.5 w-[20%]">الكمية</th>
+                  <th className="text-left py-0.5 w-[30%]">الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody>
+                {aggregatedItems.map((item, i) => (
+                  <tr key={i} className="border-b border-dashed border-black/20">
+                    <td className="py-0.5 text-right">
+                      <div className="font-semibold">{item.name}</div>
+                      <div className="text-[8.5px] text-black/50">{item.brand}</div>
+                    </td>
+                    <td className="text-center py-0.5">{item.qty}</td>
+                    <td className="text-left font-bold">{formatCurrency(item.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          <div className="my-2 border-t border-dashed border-black" />
+
+          {/* Invoices List */}
+          <div className="text-[10px] font-bold mb-1">🧾 قائمة الفواتير</div>
+          {shiftSales.length === 0 ? (
+            <div className="text-[10px] text-black/50 text-center py-1">لا توجد فواتير</div>
+          ) : (
+            <table className="w-full text-[9px] border-collapse mb-1">
+              <thead>
+                <tr className="border-b border-black text-right font-bold">
+                  <th className="text-right py-0.5 w-[30%]">رقم الفاتورة</th>
+                  <th className="text-right py-0.5 w-[35%]">العميل</th>
+                  <th className="text-center py-0.5 w-[15%]">الدفع</th>
+                  <th className="text-left py-0.5 w-[20%]">الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shiftSales.map((inv) => (
+                  <tr key={inv.id} className="border-b border-dashed border-black/20">
+                    <td className="py-0.5 font-mono text-[8.5px] text-right">#{inv.invoiceNumber.replace("INV-", "")}</td>
+                    <td className="py-0.5 text-right">{inv.customerName}</td>
+                    <td className="text-center py-0.5">
+                      {inv.paymentMethod === "Cash" ? "نقدي" : inv.paymentMethod === "Card" ? "كارت" : "مختلط"}
+                    </td>
+                    <td className="text-left font-bold">{formatCurrency(inv.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          <div className="my-2 border-t border-dashed border-black" />
+
+          {/* Summary Totals */}
+          <div className="space-y-1 text-[10px] text-black">
+            <div className="flex justify-between">
+              <span>إجمالي نقدي (كاش):</span>
+              <span>{formatCurrency(cashTotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>إجمالي فيزا/كارت:</span>
+              <span>{formatCurrency(cardTotal)}</span>
+            </div>
+            <div className="flex justify-between font-bold border-t border-black/30 pt-1">
+              <span>الإجمالي الكلي للوردية:</span>
+              <span>{formatCurrency(grandTotal)}</span>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </Dialog>
   );
 }

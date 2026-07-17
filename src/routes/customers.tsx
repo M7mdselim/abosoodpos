@@ -55,7 +55,7 @@ function CustomersPage() {
       </div>
 
       <div className="rounded-xl border border-border bg-card overflow-x-auto">
-        <Table>
+        <Table className="min-w-[800px]">
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
@@ -128,7 +128,7 @@ function CustomerDetails({
               Registered Vehicles ({customer.cars?.length || 1})
             </h3>
             <div className="rounded-lg border border-border bg-background overflow-x-auto">
-              <Table>
+              <Table className="min-w-[650px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Brand</TableHead>
@@ -167,7 +167,7 @@ function CustomerDetails({
               Service History ({history.length})
             </h3>
             <div className="max-h-60 overflow-auto rounded-lg border border-border">
-              <Table>
+              <Table className="min-w-[650px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>

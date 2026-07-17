@@ -179,7 +179,7 @@ function ProductsPage() {
         />
       </div>
       <div className="rounded-xl border border-border bg-card overflow-x-auto">
-        <Table>
+        <Table className="min-w-[900px]">
           <TableHeader>
             <TableRow>
               <TableHead>المنتج</TableHead>
@@ -364,7 +364,7 @@ function ProductDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg" dir="rtl">
+      <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader className="text-right">
           <DialogTitle>{product ? "تعديل بيانات المنتج" : "إضافة منتج جديد"}</DialogTitle>
         </DialogHeader>

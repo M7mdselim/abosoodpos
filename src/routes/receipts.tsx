@@ -330,7 +330,7 @@ function ReceiptsPage() {
 
       {/* Receipts Table (Desktop/Tablet View) */}
       <div className="hidden md:block rounded-xl border border-border bg-card overflow-x-auto">
-        <Table>
+        <Table className="min-w-[900px]">
           <TableHeader>
             <TableRow>
               <TableHead className="whitespace-nowrap">رقم الفاتورة</TableHead>

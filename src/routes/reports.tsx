@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
-import { Printer, Download, FileSpreadsheet, FileText, CalendarDays, RefreshCw, Eye, Pencil } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Printer, Download, FileSpreadsheet, FileText, CalendarDays, RefreshCw, Eye, Pencil, Filter, X } from "lucide-react";
 import { ReceiptViewDialog } from "./receipts";
 import type { Sale } from "@/types";
 
@@ -17,6 +18,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { saleService } from "@/services/saleService";
 import { shiftService, type Shift } from "@/services/shiftService";
 import { store } from "@/services/store";
@@ -169,10 +177,82 @@ function DailyReport() {
   const { session } = useSession();
   const [date, setDate] = useState(todayISO());
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+
+  // Much filters state hooks
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCashier, setSelectedCashier] = useState("all");
+  const [selectedPayment, setSelectedPayment] = useState("all");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
+  const [productQuery, setProductQuery] = useState("");
   
   // Exclude voided sales defensively
   const allSales = useMemo(() => saleService.byDate(date), [date]);
-  const sales = useMemo(() => allSales.filter(s => s.status !== "voided"), [allSales]);
+
+  // Extract unique cashiers from that day's sales dynamically
+  const cashiers = useMemo(() => {
+    const unique = new Set<string>();
+    allSales.forEach(s => {
+      if (s.cashierName) unique.add(s.cashierName);
+    });
+    return Array.from(unique);
+  }, [allSales]);
+
+  // Apply filters
+  const sales = useMemo(() => {
+    return allSales.filter(s => {
+      if (s.status === "voided") return false;
+
+      // General Search: Customer or Invoice number
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const invoiceNum = s.invoiceNumber.replace("INV-", "").toLowerCase();
+        const customer = s.customerName.toLowerCase();
+        if (!invoiceNum.includes(query) && !customer.includes(query)) {
+          return false;
+        }
+      }
+
+      // Cashier filter
+      if (selectedCashier !== "all" && s.cashierName !== selectedCashier) {
+        return false;
+      }
+
+      // Payment Method filter
+      if (selectedPayment !== "all" && s.paymentMethod !== selectedPayment) {
+        return false;
+      }
+
+      // Product/Brand filter
+      if (productQuery) {
+        const pQuery = productQuery.toLowerCase();
+        const hasProduct = s.items.some(item => 
+          item.name.toLowerCase().includes(pQuery) || 
+          (item.brand && item.brand.toLowerCase().includes(pQuery))
+        );
+        if (!hasProduct) return false;
+      }
+
+      // Min/Max Total filter
+      if (minAmount && Number(s.total || 0) < Number(minAmount)) {
+        return false;
+      }
+      if (maxAmount && Number(s.total || 0) > Number(maxAmount)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [allSales, searchQuery, selectedCashier, selectedPayment, productQuery, minAmount, maxAmount]);
+
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setSelectedCashier("all");
+    setSelectedPayment("all");
+    setMinAmount("");
+    setMaxAmount("");
+    setProductQuery("");
+  };
 
   const totalCount = sales.length;
   const cash = sales.filter((s) => s.paymentMethod === "Cash").reduce((s, r) => s + Number(r.total || 0), 0);
@@ -246,6 +326,106 @@ function DailyReport() {
           >
             <FileSpreadsheet className="h-4 w-4" /> تصدير Excel
           </Button>
+        </div>
+      </div>
+
+      {/* Filters Card */}
+      <div className="bg-card border border-border rounded-xl p-4 mb-5 shadow-xs no-print">
+        <div className="flex items-center gap-2 mb-3 border-b border-border pb-2 text-slate-800 dark:text-slate-100">
+          <Filter className="h-4 w-4 text-primary" />
+          <span className="font-bold text-sm">تصفية البيانات المتقدمة</span>
+          {(searchQuery || selectedCashier !== "all" || selectedPayment !== "all" || minAmount || maxAmount || productQuery) && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleClearFilters}
+              className="mr-auto h-7 px-2 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 gap-1"
+            >
+              <X className="h-3 w-3" />
+              إعادة تعيين
+            </Button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {/* Filter 1: Customer Name or Invoice Number */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">البحث العام</label>
+            <Input 
+              type="text"
+              placeholder="العميل أو رقم الفاتورة..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-10 text-xs font-medium"
+            />
+          </div>
+
+          {/* Filter 2: Cashier */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">أمين الصندوق</label>
+            <Select value={selectedCashier} onValueChange={setSelectedCashier}>
+              <SelectTrigger className="h-10 text-xs font-medium">
+                <SelectValue placeholder="اختر أمين الصندوق" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">الكل</SelectItem>
+                {cashiers.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Filter 3: Payment Method */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">طريقة الدفع</label>
+            <Select value={selectedPayment} onValueChange={setSelectedPayment}>
+              <SelectTrigger className="h-10 text-xs font-medium">
+                <SelectValue placeholder="طريقة الدفع" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">الكل</SelectItem>
+                <SelectItem value="Cash">نقدي</SelectItem>
+                <SelectItem value="Card">فيزا / كارت</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Filter 4: Product Name */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">البحث بالمنتج / الماركة</label>
+            <Input 
+              type="text"
+              placeholder="اسم المنتج أو الماركة..."
+              value={productQuery}
+              onChange={(e) => setProductQuery(e.target.value)}
+              className="h-10 text-xs font-medium"
+            />
+          </div>
+
+          {/* Filter 5: Min Total */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">الحد الأدنى (ج.م)</label>
+            <Input 
+              type="number"
+              placeholder="الأدنى..."
+              value={minAmount}
+              onChange={(e) => setMinAmount(e.target.value)}
+              className="h-10 text-xs font-medium font-mono"
+            />
+          </div>
+
+          {/* Filter 6: Max Total */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">الحد الأقصى (ج.م)</label>
+            <Input 
+              type="number"
+              placeholder="الأقصى..."
+              value={maxAmount}
+              onChange={(e) => setMaxAmount(e.target.value)}
+              className="h-10 text-xs font-medium font-mono"
+            />
+          </div>
         </div>
       </div>
 
@@ -367,10 +547,70 @@ function DailyReport() {
 function MonthlyReport() {
   const { session } = useSession();
   const [month, setMonth] = useState(thisMonth());
+
+  // Much filters state hooks
+  const [selectedCashier, setSelectedCashier] = useState("all");
+  const [selectedPayment, setSelectedPayment] = useState("all");
+  const [productQuery, setProductQuery] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
   
   // Exclude voided sales defensively
   const allSales = useMemo(() => saleService.byMonth(month), [month]);
-  const sales = useMemo(() => allSales.filter(s => s.status !== "voided"), [allSales]);
+
+  // Extract unique cashiers from that month's sales dynamically
+  const cashiers = useMemo(() => {
+    const unique = new Set<string>();
+    allSales.forEach(s => {
+      if (s.cashierName) unique.add(s.cashierName);
+    });
+    return Array.from(unique);
+  }, [allSales]);
+
+  // Apply filters
+  const sales = useMemo(() => {
+    return allSales.filter(s => {
+      if (s.status === "voided") return false;
+
+      // Cashier filter
+      if (selectedCashier !== "all" && s.cashierName !== selectedCashier) {
+        return false;
+      }
+
+      // Payment Method filter
+      if (selectedPayment !== "all" && s.paymentMethod !== selectedPayment) {
+        return false;
+      }
+
+      // Product/Brand filter
+      if (productQuery) {
+        const pQuery = productQuery.toLowerCase();
+        const hasProduct = s.items.some(item => 
+          item.name.toLowerCase().includes(pQuery) || 
+          (item.brand && item.brand.toLowerCase().includes(pQuery))
+        );
+        if (!hasProduct) return false;
+      }
+
+      // Min/Max Total filter
+      if (minAmount && Number(s.total || 0) < Number(minAmount)) {
+        return false;
+      }
+      if (maxAmount && Number(s.total || 0) > Number(maxAmount)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [allSales, selectedCashier, selectedPayment, productQuery, minAmount, maxAmount]);
+
+  const handleClearFilters = () => {
+    setSelectedCashier("all");
+    setSelectedPayment("all");
+    setProductQuery("");
+    setMinAmount("");
+    setMaxAmount("");
+  };
 
   // Summaries
   const totalCount = sales.length;
@@ -459,6 +699,94 @@ function MonthlyReport() {
           >
             <FileSpreadsheet className="h-4 w-4" /> تصدير Excel
           </Button>
+        </div>
+      </div>
+
+      {/* Filters Card */}
+      <div className="bg-card border border-border rounded-xl p-4 mb-5 shadow-xs no-print">
+        <div className="flex items-center gap-2 mb-3 border-b border-border pb-2 text-slate-800 dark:text-slate-100">
+          <Filter className="h-4 w-4 text-primary" />
+          <span className="font-bold text-sm">تصفية البيانات المتقدمة للتقرير الشهري</span>
+          {(selectedCashier !== "all" || selectedPayment !== "all" || minAmount || maxAmount || productQuery) && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleClearFilters}
+              className="mr-auto h-7 px-2 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 gap-1"
+            >
+              <X className="h-3 w-3" />
+              إعادة تعيين
+            </Button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          {/* Filter 1: Cashier */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">أمين الصندوق</label>
+            <Select value={selectedCashier} onValueChange={setSelectedCashier}>
+              <SelectTrigger className="h-10 text-xs font-medium">
+                <SelectValue placeholder="اختر أمين الصندوق" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">الكل</SelectItem>
+                {cashiers.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Filter 2: Payment Method */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">طريقة الدفع</label>
+            <Select value={selectedPayment} onValueChange={setSelectedPayment}>
+              <SelectTrigger className="h-10 text-xs font-medium">
+                <SelectValue placeholder="طريقة الدفع" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">الكل</SelectItem>
+                <SelectItem value="Cash">نقدي</SelectItem>
+                <SelectItem value="Card">فيزا / كارت</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Filter 3: Product Name */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">البحث بالمنتج / الماركة</label>
+            <Input 
+              type="text"
+              placeholder="اسم المنتج أو الماركة..."
+              value={productQuery}
+              onChange={(e) => setProductQuery(e.target.value)}
+              className="h-10 text-xs font-medium"
+            />
+          </div>
+
+          {/* Filter 4: Min Total */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">الحد الأدنى (ج.م)</label>
+            <Input 
+              type="number"
+              placeholder="الأدنى..."
+              value={minAmount}
+              onChange={(e) => setMinAmount(e.target.value)}
+              className="h-10 text-xs font-medium font-mono"
+            />
+          </div>
+
+          {/* Filter 5: Max Total */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">الحد الأقصى (ج.م)</label>
+            <Input 
+              type="number"
+              placeholder="الأقصى..."
+              value={maxAmount}
+              onChange={(e) => setMaxAmount(e.target.value)}
+              className="h-10 text-xs font-medium font-mono"
+            />
+          </div>
         </div>
       </div>
 
@@ -757,12 +1085,66 @@ function ShiftPrintDialog({
   if (!shift) return null;
   const settings = store.settings;
 
+  const hasActualCash = shift.actualCash !== undefined && shift.actualCash !== null;
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md p-4" dir="rtl">
+      <DialogContent className="w-[95vw] sm:max-w-[360px] p-4 max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader className="pb-1 text-right">
           <DialogTitle className="text-sm">تقرير جرد الوردية (Spot Check)</DialogTitle>
         </DialogHeader>
+
+        <style>{`
+          #receipt-print-only {
+            display: none;
+          }
+          @media print {
+            @page {
+              size: ${settings.receiptWidth || 80}mm auto;
+              margin: 0 !important;
+            }
+            html, body {
+              width: ${settings.receiptWidth || 80}mm !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              overflow: visible !important;
+              height: auto !important;
+              background: white !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            #root,
+            [data-radix-portal],
+            body > *:not(#receipt-print-only) {
+              display: none !important;
+            }
+            #receipt-print-only {
+              display: block !important;
+              position: static !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              padding: 6mm ${settings.receiptMargin !== undefined ? settings.receiptMargin : 4}mm !important;
+              margin: 0 !important;
+              border: none !important;
+              box-shadow: none !important;
+              background: white !important;
+              direction: rtl !important;
+              font-family: monospace !important;
+              font-size: ${settings.receiptFontSize || 11}px !important;
+            }
+            #receipt-print-only * {
+              font-family: monospace !important;
+              color: black !important;
+              border-color: black !important;
+              opacity: 1 !important;
+            }
+            #receipt-print-only table,
+            #receipt-print-only td,
+            #receipt-print-only th {
+              border-color: black !important;
+            }
+          }
+        `}</style>
 
         <div id="shift-print-area" className="rounded-md border border-border bg-white p-3 font-mono text-[11px] leading-normal text-black relative text-right">
           {/* Header */}
@@ -772,7 +1154,7 @@ function ShiftPrintDialog({
             )}
             <div className="text-sm font-extrabold text-black">{settings.companyNameAr}</div>
             <div className="text-[10px] mt-0.5 text-black">{settings.sloganAr}</div>
-            <div className="text-[11px] font-black mt-2 bg-black/5 py-1 text-black">تقرير جرد الوردية (Spot Check)</div>
+            <div className="text-[11px] font-black mt-2 bg-black/5 py-1 text-black text-center rounded">تقرير جرد الوردية (Spot Check)</div>
           </div>
           
           <div className="my-1.5 border-t border-dashed border-black/60" />
@@ -827,15 +1209,15 @@ function ShiftPrintDialog({
               <span>{formatCurrency(shift.expectedCash)}</span>
             </div>
 
-            {shift.actualCash !== undefined && (
+            {hasActualCash && (
               <>
                 <div className="flex justify-between text-xs font-bold pt-1">
                   <span>النقدي الفعلي بالدرج:</span>
-                  <span>{formatCurrency(shift.actualCash)}</span>
+                  <span>{formatCurrency(shift.actualCash!)}</span>
                 </div>
                 <div className="flex justify-between text-xs font-bold border-t border-black/40 pt-1">
                   <span>الفارق (عجز/زيادة):</span>
-                  <span>{formatCurrency(shift.actualCash - shift.expectedCash)}</span>
+                  <span>{formatCurrency(shift.actualCash! - shift.expectedCash)}</span>
                 </div>
               </>
             )}
@@ -863,6 +1245,101 @@ function ShiftPrintDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {open && typeof document !== "undefined" && createPortal(
+        <div id="receipt-print-only" dir="rtl" className="text-right">
+          <div className="text-center mb-2">
+            {settings.logoUrl && (
+              <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white" />
+            )}
+            <div className="text-sm font-extrabold">{settings.companyNameAr}</div>
+            <div className="text-[10px] text-black/70">{settings.sloganAr}</div>
+            <div className="text-[11px] font-black mt-1.5 border border-black/20 py-0.5 rounded text-center bg-black/5">
+              تقرير جرد الوردية (Spot Check)
+            </div>
+          </div>
+
+          <div className="my-2 border-t-2 border-dashed border-black" />
+
+          <div className="grid grid-cols-2 gap-y-1 text-[10px] text-black">
+            <div><b>يوم الوردية:</b></div>
+            <div className="text-left font-bold">{shift.shiftDay}</div>
+            <div><b>أمين الصندوق:</b></div>
+            <div className="text-left">{shift.cashierName}</div>
+            <div><b>الحالة:</b></div>
+            <div className="text-left font-bold">{shift.status === "open" ? "نشطة (مفتوحة)" : "مغلقة"}</div>
+            <div><b>وقت البدء:</b></div>
+            <div className="text-left">{new Date(shift.startTime).toLocaleString("ar-EG")}</div>
+            {shift.endTime && (
+              <>
+                <div><b>وقت الإغلاق:</b></div>
+                <div className="text-left">{new Date(shift.endTime).toLocaleString("ar-EG")}</div>
+              </>
+            )}
+          </div>
+
+          <div className="my-2 border-t border-dashed border-black" />
+
+          <div className="space-y-1 text-[10px] text-black">
+            <div className="flex justify-between">
+              <span>المبلغ الافتتاحي:</span>
+              <span>{formatCurrency(shift.openingCash)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>المبيعات النقدية:</span>
+              <span>{formatCurrency(shift.cashSalesTotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>المبيعات بالبطاقة (كارت):</span>
+              <span>{formatCurrency(shift.cardSalesTotal)}</span>
+            </div>
+            <div className="flex justify-between border-t border-black/20 pt-1 font-bold">
+              <span>إجمالي المبيعات:</span>
+              <span>{formatCurrency(shift.salesTotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>عدد عمليات البيع:</span>
+              <span>{shift.salesCount}</span>
+            </div>
+          </div>
+
+          <div className="my-2 border-t border-dashed border-black" />
+
+          <div className="space-y-1 text-[10px] text-black">
+            <div className="flex justify-between font-bold bg-black/5 px-1.5 py-1 rounded">
+              <span>النقدي المتوقع بالدرج:</span>
+              <span>{formatCurrency(shift.expectedCash)}</span>
+            </div>
+            {hasActualCash && (
+              <>
+                <div className="flex justify-between font-bold pt-0.5">
+                  <span>النقدي الفعلي بالدرج:</span>
+                  <span>{formatCurrency(shift.actualCash!)}</span>
+                </div>
+                <div className="flex justify-between font-bold border-t border-black/30 pt-1">
+                  <span>الفارق (عجز/زيادة):</span>
+                  <span>{formatCurrency(shift.actualCash! - shift.expectedCash)}</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          {shift.notes && (
+            <>
+              <div className="my-2 border-t border-dashed border-black" />
+              <div className="text-[9px] leading-normal text-black">
+                <b>ملاحظات:</b> {shift.notes}
+              </div>
+            </>
+          )}
+
+          <div className="my-2 border-t border-dashed border-black" />
+          <div className="text-center text-[9px] text-black font-bold">
+            تاريخ الطباعة: {new Date().toLocaleString("ar-EG")}
+          </div>
+        </div>,
+        document.body
+      )}
     </Dialog>
   );
 }
