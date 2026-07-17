@@ -1602,8 +1602,9 @@ function CheckoutDialog({
       setCashAmount(0);
       setCardAmount(total);
     } else if (method === "Mixed") {
-      setCashAmount(Math.round(total / 2));
-      setCardAmount(total - Math.round(total / 2));
+      const halfCash = +(total / 2).toFixed(2);
+      setCashAmount(halfCash);
+      setCardAmount(+(total - halfCash).toFixed(2));
     }
   };
 
@@ -1641,7 +1642,7 @@ function CheckoutDialog({
         <div className="space-y-4 py-3 text-right">
           <div className="bg-muted/40 p-3 rounded-lg border border-border text-center">
             <span className="text-xs text-muted-foreground block">إجمالي المطلوب دفعه</span>
-            <span className="text-2xl font-black text-primary">{total.toFixed(0)} ج.م</span>
+            <span className="text-2xl font-black text-primary">{total.toFixed(2)} ج.م</span>
           </div>
 
           <div className="space-y-2">
