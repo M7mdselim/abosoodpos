@@ -68,7 +68,26 @@ function ShiftsPage() {
   const history = useMemo(() => {
     const shifts = shiftService.getShifts();
     if (session?.role === "cashier") {
-      return shifts.filter((s) => s.cashierId === session?.id);
+      const getLocalDateString = (offsetDays = 0) => {
+        const date = new Date();
+        date.setDate(date.getDate() - offsetDays);
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      };
+      const today = getLocalDateString(0);
+      const yesterday = getLocalDateString(1);
+
+      return shifts.filter((s) => {
+        const isOwnShift = s.cashierId === session?.id;
+        if (!isOwnShift) return false;
+        
+        const isTodayOrYesterday = s.shiftDay === today || s.shiftDay === yesterday;
+        const isOpen = s.status === "open";
+        
+        return isTodayOrYesterday || isOpen;
+      });
     }
     return shifts;
   }, [tick, session]);
@@ -656,8 +675,8 @@ function ShiftPrintDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-sm p-4">
-        <DialogHeader className="pb-1">
+      <DialogContent className="max-w-md p-4" dir="rtl">
+        <DialogHeader className="pb-1 text-right">
           <DialogTitle className="text-sm">تقرير جرد الوردية (Spot Check)</DialogTitle>
         </DialogHeader>
 
@@ -855,8 +874,8 @@ function ShiftSalesPrintDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-xl p-4 max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="pb-1">
+      <DialogContent className="max-w-xl p-4 max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogHeader className="pb-1 text-right">
           <DialogTitle className="text-sm flex items-center gap-2">
             <FileText className="h-4 w-4 text-sky-600" />
             تقرير المبيعات المنفذة — الوردية {shift.shiftDay} ({shift.cashierName})

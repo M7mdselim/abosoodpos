@@ -364,16 +364,16 @@ function ProductDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
+      <DialogContent className="max-w-lg" dir="rtl">
+        <DialogHeader className="text-right">
           <DialogTitle>{product ? "تعديل بيانات المنتج" : "إضافة منتج جديد"}</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-3 py-2 text-left">
+        <div className="grid gap-3 py-2 text-right">
           <div>
             <Label>اسم المنتج</Label>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label>الفئة</Label>
               <Select
@@ -426,7 +426,7 @@ function ProductDialog({
             <Label>الباركود</Label>
             <Input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <Label>سعر الشراء</Label>
               <Input type="number" value={form.buyingPrice} onChange={(e) => setForm({ ...form, buyingPrice: Number(e.target.value) })} />

@@ -590,7 +590,26 @@ function ShiftsReport() {
   const shifts = useMemo(() => {
     const list = shiftService.getShifts();
     if (session?.role === "cashier") {
-      return list.filter((s) => s.cashierId === session.id);
+      const getLocalDateString = (offsetDays = 0) => {
+        const date = new Date();
+        date.setDate(date.getDate() - offsetDays);
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      };
+      const today = getLocalDateString(0);
+      const yesterday = getLocalDateString(1);
+
+      return list.filter((s) => {
+        const isOwnShift = s.cashierId === session?.id;
+        if (!isOwnShift) return false;
+        
+        const isTodayOrYesterday = s.shiftDay === today || s.shiftDay === yesterday;
+        const isOpen = s.status === "open";
+        
+        return isTodayOrYesterday || isOpen;
+      });
     }
     return list;
   }, [session, tick]);
@@ -740,9 +759,9 @@ function ShiftPrintDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-sm p-4">
-        <DialogHeader className="pb-1">
-          <DialogTitle className="text-sm text-right">تقرير جرد الوردية (Spot Check)</DialogTitle>
+      <DialogContent className="max-w-md p-4" dir="rtl">
+        <DialogHeader className="pb-1 text-right">
+          <DialogTitle className="text-sm">تقرير جرد الوردية (Spot Check)</DialogTitle>
         </DialogHeader>
 
         <div id="shift-print-area" className="rounded-md border border-border bg-white p-3 font-mono text-[11px] leading-normal text-black relative text-right">
