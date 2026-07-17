@@ -76,6 +76,7 @@ let _users = getLocal<User[]>("pos_users", []).map((u) => {
           canEditPaymentMethods: u.permissions?.canEditPaymentMethods ?? false,
           canVoidReceipts: u.permissions?.canVoidReceipts ?? false,
           canViewReports: u.permissions?.canViewReports ?? false,
+          canCloseAnyShift: u.permissions?.canCloseAnyShift ?? false,
         }
       : undefined
   };
@@ -176,6 +177,7 @@ export const store = {
             canEditPaymentMethods: u.permissions?.canEditPaymentMethods ?? false,
             canVoidReceipts: u.permissions?.canVoidReceipts ?? false,
             canViewReports: u.permissions?.canViewReports ?? false,
+            canCloseAnyShift: u.permissions?.canCloseAnyShift ?? false,
           }
         : undefined
     }));

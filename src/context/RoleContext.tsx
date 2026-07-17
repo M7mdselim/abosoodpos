@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import { authService, type SessionUser } from "@/services/authService";
 
 interface RoleContextValue {
@@ -11,6 +11,18 @@ const RoleContext = createContext<RoleContextValue | null>(null);
 
 export function RoleProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<SessionUser | null>(() => authService.getSession());
+
+  useEffect(() => {
+    const handleSessionUpdate = () => {
+      setSession(authService.getSession());
+    };
+    window.addEventListener("session_updated", handleSessionUpdate);
+    window.addEventListener("storage", handleSessionUpdate);
+    return () => {
+      window.removeEventListener("session_updated", handleSessionUpdate);
+      window.removeEventListener("storage", handleSessionUpdate);
+    };
+  }, []);
 
   const login = (username: string, password: string): boolean => {
     const user = authService.login(username, password);

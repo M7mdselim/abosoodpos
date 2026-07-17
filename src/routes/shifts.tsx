@@ -63,7 +63,10 @@ function ShiftsPage() {
   }, [activeShift, session]);
 
   const canManageActiveShift = useMemo(() => {
-    return session?.role !== "cashier" || isOwnActiveShift;
+    if (!session) return false;
+    if (session.role !== "cashier") return true;
+    if (isOwnActiveShift) return true;
+    return !!session.permissions?.canCloseAnyShift;
   }, [session, isOwnActiveShift]);
 
   const history = useMemo(() => {
@@ -99,6 +102,10 @@ function ShiftsPage() {
   const handleOpenShift = (e: React.FormEvent) => {
     e.preventDefault();
     if (!session) return;
+    if (!hasOpenPermission) {
+      toast.error("تنبيه: لا تملك الصلاحية لفتح وبدء وردية جديدة.");
+      return;
+    }
     const amount = parseFloat(openingCash);
     if (isNaN(amount) || amount < 0) {
       toast.error("يرجى إدخال مبلغ افتتاح صحيح");
@@ -114,6 +121,14 @@ function ShiftsPage() {
 
   const handleRequestCloseShift = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!hasClosePermission) {
+      toast.error("تنبيه: لا تملك الصلاحية لإغلاق الوردية.");
+      return;
+    }
+    if (!isOwnActiveShift && session?.role === "cashier" && !session.permissions?.canCloseAnyShift) {
+      toast.error("تنبيه: لا تملك الصلاحية لإغلاق وردية مستخدم آخر.");
+      return;
+    }
     const amount = parseFloat(actualCash);
     if (isNaN(amount) || amount < 0) {
       toast.error("يرجى إدخال مبلغ إغلاق صحيح");

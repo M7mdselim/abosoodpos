@@ -82,6 +82,11 @@ function UsersPage() {
   };
 
   const handleDeleteUser = (id: string, name: string) => {
+    const user = userService.list().find((u) => u.id === id);
+    if (user?.role === "developer" && session?.role !== "developer") {
+      toast.error("لا يمكن لحساب مدير النظام حذف حساب مطور النظام");
+      return;
+    }
     if (confirm(`هل أنت متأكد من حذف المستخدم ${name} نهائياً؟`)) {
       userService.remove(id);
       toast.success(`تم حذف المستخدم ${name} بنجاح`);
@@ -159,6 +164,7 @@ function UsersPage() {
                       <div className="flex items-center gap-2">
                         <Switch
                           checked={u.status === "active"}
+                          disabled={u.role === "developer" && session?.role !== "developer"}
                           onCheckedChange={(checked) => {
                             userService.update(u.id, { status: checked ? "active" : "inactive" });
                             toast.success(`تم ${checked ? "تفعيل" : "إلغاء تفعيل"} حساب المستخدم ${u.name}`);
@@ -171,8 +177,10 @@ function UsersPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-xs">
-                      {u.role === "admin" ? (
-                        <span className="text-blue-600 font-bold">صلاحيات كاملة</span>
+                      {u.role !== "cashier" ? (
+                        <span className={u.role === "developer" ? "text-purple-650 font-extrabold dark:text-purple-400" : "text-blue-600 font-bold"}>
+                          صلاحيات كاملة {u.role === "developer" && "(مطور)"}
+                        </span>
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {u.permissions?.canDiscount && <Badge variant="secondary" className="text-[10px]">الخصم</Badge>}
@@ -199,24 +207,28 @@ function UsersPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-left pl-4">
-                      <div className="flex items-center justify-start gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleOpenEdit(u)}
-                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleDeleteUser(u.id, u.name)}
-                          className="h-8 w-8 text-destructive hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      {!(u.role === "developer" && session?.role !== "developer") ? (
+                        <div className="flex items-center justify-start gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleOpenEdit(u)}
+                            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleDeleteUser(u.id, u.name)}
+                            className="h-8 w-8 text-destructive hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground font-semibold px-2">غير قابل للتعديل</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -247,6 +259,7 @@ function UserFormDialog({
   user: User | null;
   onSaved: () => void;
 }) {
+  const { session } = useSession();
   const isEdit = !!user;
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
@@ -264,6 +277,7 @@ function UserFormDialog({
   const [canEditPaymentMethods, setCanEditPaymentMethods] = useState(false);
   const [canVoidReceipts, setCanVoidReceipts] = useState(false);
   const [canViewReports, setCanViewReports] = useState(false);
+  const [canCloseAnyShift, setCanCloseAnyShift] = useState(false);
 
   // Sync state when dialog opens or user changes
   useMemo(() => {
@@ -283,6 +297,7 @@ function UserFormDialog({
         setCanEditPaymentMethods(user.permissions?.canEditPaymentMethods ?? false);
         setCanVoidReceipts(user.permissions?.canVoidReceipts ?? false);
         setCanViewReports(user.permissions?.canViewReports ?? false);
+        setCanCloseAnyShift(user.permissions?.canCloseAnyShift ?? false);
       } else {
         setName("");
         setUsername("");
@@ -298,6 +313,7 @@ function UserFormDialog({
         setCanEditPaymentMethods(false);
         setCanVoidReceipts(false);
         setCanViewReports(false);
+        setCanCloseAnyShift(false);
       }
     }
   }, [open, user]);
@@ -313,6 +329,16 @@ function UserFormDialog({
     }
     if (!isEdit && !password.trim()) {
       toast.error("يرجى تعيين كلمة مرور للمستخدم الجديد");
+      return;
+    }
+
+    if (user?.role === "developer" && session?.role !== "developer") {
+      toast.error("لا يملك مدير النظام صلاحية تعديل حساب مطور النظام");
+      return;
+    }
+
+    if (user?.role === "developer" && role !== "developer") {
+      toast.error("لا يمكن تعديل دور مطور النظام");
       return;
     }
 
@@ -332,6 +358,7 @@ function UserFormDialog({
       canEditPaymentMethods,
       canVoidReceipts,
       canViewReports,
+      canCloseAnyShift,
     };
 
     if (isEdit && user) {
@@ -492,6 +519,17 @@ function UserFormDialog({
                   />
                   <label htmlFor="perm_close" className="font-semibold cursor-pointer select-none">
                     السماح بإغلاق وإنهاء الوردية
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox 
+                    id="perm_close_any" 
+                    checked={canCloseAnyShift} 
+                    onCheckedChange={(checked) => setCanCloseAnyShift(!!checked)}
+                  />
+                  <label htmlFor="perm_close_any" className="font-semibold cursor-pointer select-none">
+                    السماح بإغلاق وردية أي مستخدم آخر
                   </label>
                 </div>
 

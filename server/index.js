@@ -972,6 +972,7 @@ app.post("/api/dev/reset-db", async (req, res) => {
       canEditPaymentMethods: false,
       canVoidReceipts: false,
       canViewReports: false,
+      canCloseAnyShift: false,
     };
     await client.query(`
       INSERT INTO users (id, username, password, name, role, status, permissions)

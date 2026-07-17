@@ -21,6 +21,7 @@ export const authService = {
         username: "selim",
       };
       localStorage.setItem("app_session", JSON.stringify(session));
+      window.dispatchEvent(new Event("session_updated"));
       userLogService.log(session.id, session.name, session.role, "تسجيل الدخول", `تم تسجيل دخول مطور النظام بنجاح.`);
       return session;
     }
@@ -42,6 +43,7 @@ export const authService = {
     };
 
     localStorage.setItem("app_session", JSON.stringify(session));
+    window.dispatchEvent(new Event("session_updated"));
     userLogService.log(session.id, session.name, session.role, "تسجيل الدخول", `تم تسجيل دخول المستخدم ${session.name} بنجاح.`);
     return session;
   },
@@ -52,6 +54,7 @@ export const authService = {
       userLogService.log(session.id, session.name, session.role, "تسجيل الخروج", `تم تسجيل خروج المستخدم ${session.name}.`);
     }
     localStorage.removeItem("app_session");
+    window.dispatchEvent(new Event("session_updated"));
   },
 
   getSession(): SessionUser | null {

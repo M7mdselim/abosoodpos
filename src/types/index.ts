@@ -10,6 +10,7 @@ export interface UserPermissions {
   canEditPaymentMethods?: boolean;
   canVoidReceipts?: boolean;
   canViewReports?: boolean;
+  canCloseAnyShift?: boolean;
 }
 
 export interface User {

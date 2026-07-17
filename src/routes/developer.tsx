@@ -44,6 +44,10 @@ export const Route = createFileRoute("/developer")({
     if (!authService.isAuthenticated()) {
       throw redirect({ to: "/login" });
     }
+    const session = authService.getSession();
+    if (session?.role !== "developer") {
+      throw redirect({ to: "/pos" });
+    }
   },
   component: DeveloperControlsPage,
 });

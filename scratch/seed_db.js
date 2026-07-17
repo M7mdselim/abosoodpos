@@ -55,7 +55,8 @@ async function seed() {
         canViewReceipts: true,
         canReprintReceipts: true,
         canEditPaymentMethods: false,
-        canVoidReceipts: false
+        canVoidReceipts: false,
+        canCloseAnyShift: false
       };
       await client.query(`
         INSERT INTO users (id, username, password, name, role, status, permissions)

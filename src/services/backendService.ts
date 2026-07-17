@@ -74,7 +74,7 @@ export const backendService = {
         if (storedSession && users) {
           try {
             const currentSession = JSON.parse(storedSession);
-            const updatedMe = users.find((u: any) => u.id === currentSession.id);
+            const updatedMe = store.users.find((u: any) => u.id === currentSession.id);
             if (updatedMe) {
               const newSession = {
                 ...currentSession,
@@ -84,6 +84,7 @@ export const backendService = {
                 permissions: updatedMe.permissions,
               };
               localStorage.setItem("app_session", JSON.stringify(newSession));
+              window.dispatchEvent(new Event("session_updated"));
             }
           } catch (e) {
             console.error("Error updating active session on sync:", e);
