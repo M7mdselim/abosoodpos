@@ -164,6 +164,7 @@ function DeveloperControlsPage() {
   const [receiptMargin, setReceiptMargin] = useState(currentSettings.receiptMargin !== undefined ? currentSettings.receiptMargin : 4);
   const [receiptFontSize, setReceiptFontSize] = useState(currentSettings.receiptFontSize || 11);
   const [receiptFooter, setReceiptFooter] = useState(currentSettings.receiptFooter || "شكراً لزيارتكم — رافقتكم السلامة!");
+  const [directPrint, setDirectPrint] = useState(currentSettings.directPrint ?? false);
 
   const handleSavePrinterSettings = () => {
     const updated = {
@@ -172,6 +173,7 @@ function DeveloperControlsPage() {
       receiptMargin,
       receiptFontSize,
       receiptFooter,
+      directPrint,
     };
     store.settings = updated;
     backendService.saveSettings(updated).catch((err) => console.error("Error saving printer settings in backend:", err));
@@ -197,8 +199,9 @@ function DeveloperControlsPage() {
     setReceiptMargin(4);
     setReceiptFontSize(11);
     setReceiptFooter("شكراً لزيارتكم — رافقتكم السلامة!");
+    setDirectPrint(false);
     toast.success(
-      language === "ar" ? "تمت إعادة تعيين الإعدادات الافتراضية للطباعة" : "Reset printer defaults successfully"
+      language === "ar" ? "تم إعادة ضبط إعدادات الطابعة إلى الافتراضية" : "Receipt settings reset to default"
     );
   };
 
@@ -584,6 +587,25 @@ function DeveloperControlsPage() {
                         ? "النص الذي يظهر في نهاية الإيصال. يدعم أسطر متعددة."
                         : "Text displayed at the end of the receipt. Supports multiple lines."}
                     </p>
+                  </div>
+
+                  {/* Direct Print Toggle */}
+                  <div className="flex items-center justify-between py-3 border-t border-border mt-3">
+                    <div className="space-y-0.5 text-right">
+                      <Label htmlFor="direct-print-toggle" className="font-bold text-xs text-muted-foreground">
+                        {language === "ar" ? "الطباعة المباشرة بعد الدفع" : "Direct Print on Checkout"}
+                      </Label>
+                      <span className="text-[10px] text-muted-foreground block">
+                        {language === "ar"
+                          ? "عند التفعيل، سيتم فتح نافذة الطباعة فوراً وتخطي عرض الفاتورة بعد الدفع."
+                          : "Immediately open print dialog and bypass showing invoice preview after payment."}
+                      </span>
+                    </div>
+                    <Switch
+                      id="direct-print-toggle"
+                      checked={directPrint}
+                      onCheckedChange={(checked) => setDirectPrint(checked)}
+                    />
                   </div>
                 </div>
 

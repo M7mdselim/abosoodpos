@@ -14,6 +14,7 @@ export interface AppSettings {
   logoUrl?: string;
   receiptFooter?: string;
   lowStockThreshold?: number;
+  directPrint?: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -30,6 +31,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   logoUrl: "/logo.jpg",
   receiptFooter: "شكراً لزيارتكم — رافقتكم السلامة!",
   lowStockThreshold: 5,
+  directPrint: false,
 };
 
 const getLocal = <T>(key: string, fallback: T): T => {

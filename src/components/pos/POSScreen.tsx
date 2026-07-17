@@ -8,6 +8,7 @@ import { customerService } from "@/services/customerService";
 import { saleService } from "@/services/saleService";
 import { shiftService, type Shift } from "@/services/shiftService";
 import { store } from "@/services/store";
+import { backendService } from "@/services/backendService";
 import { useSession } from "@/context/RoleContext";
 import { useLanguage } from "@/context/LanguageContext";
 import type { Customer, CustomerCar, InvoiceItem, PaymentMethod, Product, ProductCategory } from "@/types";
@@ -20,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 
 
 
@@ -68,8 +70,35 @@ export function POSScreen() {
   const [draftReceiptOpen, setDraftReceiptOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [lastSale, setLastSale] = useState<ReturnType<typeof saleService.create> | null>(null);
+  
+  const [directPrint, setDirectPrintState] = useState(() => {
+    return store.settings.directPrint ?? false;
+  });
+  const [isPrintingDirect, setIsPrintingDirect] = useState(false);
+
+  const setDirectPrint = (val: boolean) => {
+    setDirectPrintState(val);
+    const updated = {
+      ...store.settings,
+      directPrint: val,
+    };
+    store.settings = updated;
+    backendService.saveSettings(updated).catch((err) => console.error("Error saving direct print setting:", err));
+  };
 
   const phoneRef = useRef<HTMLInputElement>(null);
+
+  // Trigger window.print() headlessly and clear invoice for direct print
+  useEffect(() => {
+    if (isPrintingDirect && lastSale) {
+      const timer = setTimeout(() => {
+        window.print();
+        setIsPrintingDirect(false);
+        clearInvoice();
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [isPrintingDirect, lastSale]);
 
   // Read feature flag for VAT
   const vatEnabled = localStorage.getItem("dev_feature_vat") !== "false";
@@ -331,7 +360,11 @@ export function POSScreen() {
     shiftService.recordSale(total, method, cashAmount, cardAmount);
 
     setLastSale(sale);
-    setReceiptOpen(true);
+    if (directPrint) {
+      setIsPrintingDirect(true);
+    } else {
+      setReceiptOpen(true);
+    }
     toast.success(`${t("success_sale")} — #${sale.invoiceNumber.replace("INV-", "")}`);
   }
 
@@ -867,6 +900,7 @@ export function POSScreen() {
           if (!o) clearInvoice();
         }}
         sale={lastSale}
+        renderPrintOnly={isPrintingDirect}
       />
 
       <ReceiptDialog
@@ -881,6 +915,8 @@ export function POSScreen() {
         onOpenChange={setCheckoutOpen}
         total={total}
         onConfirm={completeSale}
+        directPrint={directPrint}
+        setDirectPrint={setDirectPrint}
       />
 
     </div>
@@ -1070,11 +1106,13 @@ function ReceiptDialog({
   onOpenChange,
   sale,
   isDraft = false,
+  renderPrintOnly = false,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   sale: ReturnType<typeof saleService.create> | null;
   isDraft?: boolean;
+  renderPrintOnly?: boolean;
 }) {
   if (!sale) return null;
   const settings = store.settings;
@@ -1249,7 +1287,7 @@ function ReceiptDialog({
       </Dialog>
 
       {/* Render the identical clean print-only receipt sibling container directly in body */}
-      {open && typeof document !== "undefined" && createPortal(
+      {(open || renderPrintOnly) && typeof document !== "undefined" && createPortal(
         <div 
           id="receipt-print-only" 
           dir="rtl"
@@ -1551,11 +1589,15 @@ function CheckoutDialog({
   onOpenChange,
   total,
   onConfirm,
+  directPrint,
+  setDirectPrint,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   total: number;
   onConfirm: (method: PaymentMethod, cashAmount?: number, cardAmount?: number) => void;
+  directPrint: boolean;
+  setDirectPrint: (val: boolean) => void;
 }) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash");
   const [cashAmount, setCashAmount] = useState<number>(total);
@@ -1678,6 +1720,23 @@ function CheckoutDialog({
               </div>
             </div>
           )}
+
+          {/* Direct Print Toggle Switch */}
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border/80 bg-muted/30">
+            <div className="space-y-0.5 text-right">
+              <Label htmlFor="checkout-direct-print" className="font-bold text-xs">
+                الطباعة المباشرة للفاتورة
+              </Label>
+              <span className="text-[10px] text-muted-foreground block">
+                تخطي عرض الفاتورة والطباعة مباشرة فور تأكيد الدفع
+              </span>
+            </div>
+            <Switch
+              id="checkout-direct-print"
+              checked={directPrint}
+              onCheckedChange={setDirectPrint}
+            />
+          </div>
         </div>
         <DialogFooter className="gap-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>إلغاء</Button>
