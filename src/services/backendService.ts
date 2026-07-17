@@ -10,7 +10,7 @@ export const backendService = {
       const prodRes = await fetch("/api/products");
       if (!prodRes.ok) throw new Error(`Products sync: ${prodRes.status}`);
       const products = await prodRes.json();
-      if (products && products.length > 0) {
+      if (products && Array.isArray(products)) {
         store.products = products;
       }
 
@@ -64,7 +64,7 @@ export const backendService = {
       const usersRes = await fetch("/api/users");
       if (!usersRes.ok) throw new Error(`Users sync: ${usersRes.status}`);
       const users = await usersRes.json();
-      if (users && users.length > 0) {
+      if (users && Array.isArray(users)) {
         store.users = users;
       }
 
@@ -251,6 +251,17 @@ export const backendService = {
         } catch {}
       }
       throw new Error(errMsg);
+    }
+  },
+
+  async resetDatabase(): Promise<void> {
+    const res = await fetch("/api/dev/reset-db", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to reset database");
     }
   },
 };

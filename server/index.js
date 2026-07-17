@@ -940,6 +940,91 @@ app.post("/api/backup/import", async (req, res) => {
   }
 });
 
+app.post("/api/dev/reset-db", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // 1. Wipe all tables sequentially
+    await client.query('DELETE FROM "customer_cars"');
+    await client.query('DELETE FROM "sale_items"');
+    await client.query('DELETE FROM "sales"');
+    await client.query('DELETE FROM "register_shifts"');
+    await client.query('DELETE FROM "customers"');
+    await client.query('DELETE FROM "products"');
+    await client.query('DELETE FROM "users"');
+    await client.query('DELETE FROM "user_logs"');
+    await client.query('DELETE FROM "settings"');
+
+    // 2. Insert default users
+    await client.query(`
+      INSERT INTO users (id, username, password, name, role, status, permissions)
+      VALUES ('u_admin_real', 'admin', 'admin123', 'أبو السعود (المدير)', 'admin', 'active', NULL)
+    `);
+
+    const cashierPerms = {
+      canDiscount: true,
+      canOpenShift: true,
+      canCloseShift: true,
+      canPrintSpotCheck: true,
+      canViewReceipts: true,
+      canReprintReceipts: true,
+      canEditPaymentMethods: false,
+      canVoidReceipts: false,
+      canViewReports: false,
+    };
+    await client.query(`
+      INSERT INTO users (id, username, password, name, role, status, permissions)
+      VALUES ('u_cashier_real', 'cashier', '123', 'أحمد محمود (الكاشير)', 'cashier', 'active', $1)
+    `, [JSON.stringify(cashierPerms)]);
+
+    // 3. Insert default settings
+    const defaultSettings = {
+      companyNameAr: "شركة أبو السعود علام",
+      companyNameEn: "Abu Saud Allam Oils",
+      sloganAr: "لجميع أنواع الزيوت والخدمات",
+      sloganEn: "For All Types of Oils & Services",
+      phone: "01021111666",
+      address: "المحلة الكبرى، مصر",
+      shiftMode: "multiple",
+      receiptWidth: "80",
+      receiptMargin: "4",
+      receiptFontSize: "11",
+      logoUrl: "/logo.jpg",
+      receiptFooter: "شكراً لزيارتكم — رافقتكم السلامة!",
+      lowStockThreshold: "5",
+      directPrint: "false",
+      autoBackupEnabled: "false",
+      autoBackupTime: "22:00",
+      lastAutoBackupDate: "",
+    };
+
+    for (const key of Object.keys(defaultSettings)) {
+      await client.query(
+        `INSERT INTO settings (key, value) VALUES ($1, $2)`,
+        [key, defaultSettings[key]]
+      );
+    }
+
+    // 4. Reset the auto-increment sequence for sale_items
+    try {
+      await client.query('ALTER SEQUENCE "sale_items_id_seq" RESTART WITH 1');
+    } catch (seqErr) {
+      console.warn("Could not reset sequence sale_items_id_seq:", seqErr.message);
+    }
+
+    await client.query("COMMIT");
+    invalidateCache();
+
+    res.json({ success: true });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    res.status(500).json({ error: "Failed to reset database: " + err.message });
+  } finally {
+    client.release();
+  }
+});
+
 // Start Server
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {

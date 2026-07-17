@@ -16,6 +16,14 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   ToggleLeft,
   Coins,
   ShieldAlert,
@@ -44,6 +52,56 @@ function DeveloperControlsPage() {
   const { session } = useSession();
   const { t, language } = useLanguage();
   const router = useRouter();
+
+  // Database Reset dialog state
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [resetConfirmationText, setResetConfirmationText] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleResetDatabase = async () => {
+    if (resetConfirmationText !== "RESET" && resetConfirmationText !== "تأكيد") {
+      toast.error(
+        language === "ar"
+          ? "يرجى كتابة كلمة التأكيد بشكل صحيح"
+          : "Please enter the confirmation text correctly"
+      );
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      await backendService.resetDatabase();
+
+      // Clear all POS localStorage items
+      localStorage.removeItem("pos_customers");
+      localStorage.removeItem("pos_products");
+      localStorage.removeItem("pos_sales");
+      localStorage.removeItem("pos_users");
+      localStorage.removeItem("pos_settings");
+      localStorage.removeItem("pos_categories");
+      localStorage.removeItem("app_shifts");
+      localStorage.removeItem("app_user_logs");
+
+      toast.success(
+        language === "ar"
+          ? "تمت إعادة تهيئة قاعدة البيانات بالكامل بنجاح!"
+          : "Database reset and seeded with default data successfully!"
+      );
+      setIsResetDialogOpen(false);
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err: any) {
+      toast.error(
+        language === "ar"
+          ? `فشل إعادة تهيئة قاعدة البيانات: ${err.message}`
+          : `Failed to reset database: ${err.message}`
+      );
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   // If logged in, check if user is developer
   const isDeveloper = session?.role === "developer";
@@ -1028,9 +1086,103 @@ function DeveloperControlsPage() {
               </>
             )}
           </CardContent>
-        </Card>
-
+         </Card>
       </div>
+
+      {/* Danger Zone: Database Reset */}
+      <div className="mt-6">
+        <Card className="border-destructive/30 bg-destructive/5 shadow-sm">
+          <CardHeader className="text-right">
+            <CardTitle className="text-destructive flex items-center justify-end gap-2 font-black">
+              <ShieldAlert className="h-5 w-5" />
+              {language === "ar" ? "منطقة الخطورة / صيانة قاعدة البيانات" : "Danger Zone / Database Maintenance"}
+            </CardTitle>
+            <CardDescription className="text-slate-600 dark:text-slate-400 font-semibold">
+              {language === "ar"
+                ? "إعادة تهيئة كاملة لقاعدة البيانات ومسح جميع المبيعات والمنتجات والورديات والعملاء وإعادتها للحالة الافتراضية."
+                : "Completely reset the database, erasing all sales, products, shifts, and customers, and restoring default settings."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-right">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+              <div className="flex-1">
+                <h4 className="font-black text-sm text-destructive">
+                  {language === "ar" ? "مسح شامل وإعادة ضبط المصنع" : "Full Factory Reset & Database Wipe"}
+                </h4>
+                <p className="text-xs text-muted-foreground mt-1 font-semibold">
+                  {language === "ar"
+                    ? "سيتم مسح جميع البيانات نهائياً. لا يمكن التراجع عن هذا الإجراء بعد تنفيذه."
+                    : "All records will be permanently deleted. This action cannot be undone."}
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setResetConfirmationText("");
+                  setIsResetDialogOpen(true);
+                }}
+                className="font-black shrink-0 h-11"
+              >
+                {language === "ar" ? "تهيئة قاعدة البيانات بالكامل" : "Reset Entire Database"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Reset Database Confirmation Dialog */}
+      <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+        <DialogContent className="sm:max-w-[420px]" dir={language === "ar" ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center justify-end gap-2 text-base font-black">
+              <ShieldAlert className="h-5 w-5 text-destructive" />
+              {language === "ar" ? "تنبيه أمان حرج!" : "Critical Security Warning!"}
+            </DialogTitle>
+            <DialogDescription className="text-xs font-semibold leading-relaxed mt-2 text-slate-600 dark:text-slate-400 text-right">
+              {language === "ar"
+                ? "أنت على وشك مسح كافة البيانات المسجلة بالنظام نهائياً (المبيعات، الورديات، المنتجات، العملاء، السجلات، والإعدادات). لن تتمكن من استعادتها بعد الآن."
+                : "You are about to permanently erase all registered data in the system (sales, shifts, products, customers, logs, and settings). This cannot be restored."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 my-4">
+            <Label className="text-xs font-bold text-muted-foreground block text-right">
+              {language === "ar"
+                ? 'لتأكيد هذا الإجراء، يرجى كتابة "تأكيد" أو "RESET" في الحقل أدناه:'
+                : 'To authorize this action, please type "RESET" or "تأكيد" in the field below:'}
+            </Label>
+            <Input
+              value={resetConfirmationText}
+              onChange={(e) => setResetConfirmationText(e.target.value)}
+              placeholder={language === "ar" ? 'اكتب "تأكيد" أو "RESET"' : 'Type "RESET" or "تأكيد"'}
+              className="h-10 text-center font-bold text-sm bg-background border-input"
+            />
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setIsResetDialogOpen(false)}
+              disabled={isResetting}
+              className="h-10 text-xs font-bold flex-1"
+            >
+              {language === "ar" ? "إلغاء التراجع" : "Cancel & Close"}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleResetDatabase}
+              disabled={isResetting || (resetConfirmationText !== "RESET" && resetConfirmationText !== "تأكيد")}
+              className="h-10 text-xs font-bold flex-1"
+            >
+              {isResetting ? (
+                language === "ar" ? "جاري التهيئة..." : "Resetting..."
+              ) : (
+                language === "ar" ? "تأكيد المسح النهائي" : "Confirm Permanent Reset"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 }
