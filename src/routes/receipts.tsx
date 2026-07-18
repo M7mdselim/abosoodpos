@@ -98,19 +98,14 @@ function ReceiptsPage() {
   const sales = useMemo(() => {
     let list = saleService.list();
     
-    // Cashier filter: only see their own shift receipts
+    // Cashier filter: only see their own current/last shift receipts based on shiftDay
     if (session?.role === "cashier") {
-      const activeShift = shiftService.getActiveShift();
-      if (activeShift && activeShift.cashierId === session.id) {
-        list = list.filter((s) => s.cashierId === session.id && s.shiftDay === activeShift.shiftDay);
+      const cashierShifts = shiftService.getShifts().filter((sh) => sh.cashierId === session.id);
+      const currentOrLastShift = cashierShifts[0]; // Since shifts are sorted DESC
+      if (currentOrLastShift) {
+        list = list.filter((s) => s.cashierId === session.id && s.shiftDay === currentOrLastShift.shiftDay);
       } else {
-        const cashierShifts = shiftService.getShifts().filter((sh) => sh.cashierId === session.id);
-        const lastShiftDay = cashierShifts[0]?.shiftDay;
-        if (lastShiftDay) {
-          list = list.filter((s) => s.cashierId === session.id && s.shiftDay === lastShiftDay);
-        } else {
-          list = list.filter((s) => s.cashierId === session.id);
-        }
+        list = list.filter((s) => s.cashierId === session.id);
       }
     }
 
@@ -125,29 +120,34 @@ function ReceiptsPage() {
       );
     }
 
-    // Date range filter
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    // Date range filter (using shiftDay operational business date)
+    const getShiftDayString = (offsetDays = 0) => {
+      const d = new Date();
+      d.setDate(d.getDate() - offsetDays);
+      return d.toISOString().split("T")[0];
+    };
+
+    const todayStr = getShiftDayString(0);
+    const yesterdayStr = getShiftDayString(1);
+    const sevenDaysAgoStr = getShiftDayString(6);
+    const thirtyDaysAgoStr = getShiftDayString(29);
+
     list = list.filter((s) => {
-      const saleTime = new Date(s.date).getTime();
+      if (!s.shiftDay) return true;
       if (dateFilter === "today") {
-        return saleTime >= todayStart;
+        return s.shiftDay === todayStr;
       }
       if (dateFilter === "yesterday") {
-        const yesterdayStart = todayStart - 24 * 60 * 60 * 1000;
-        return saleTime >= yesterdayStart && saleTime < todayStart;
+        return s.shiftDay === yesterdayStr;
       }
       if (dateFilter === "2days") {
-        const twoDaysAgoStart = todayStart - 24 * 60 * 60 * 1000; // Today and Yesterday
-        return saleTime >= twoDaysAgoStart;
+        return s.shiftDay === todayStr || s.shiftDay === yesterdayStr;
       }
       if (dateFilter === "7days") {
-        const sevenDaysAgo = todayStart - 6 * 24 * 60 * 60 * 1000;
-        return saleTime >= sevenDaysAgo;
+        return s.shiftDay >= sevenDaysAgoStr;
       }
       if (dateFilter === "30days") {
-        const thirtyDaysAgo = todayStart - 29 * 24 * 60 * 60 * 1000;
-        return saleTime >= thirtyDaysAgo;
+        return s.shiftDay >= thirtyDaysAgoStr;
       }
       return true; // "all"
     });
