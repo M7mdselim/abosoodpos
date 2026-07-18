@@ -551,14 +551,57 @@ app.post("/api/sales", async (req, res) => {
     status,
   } = req.body;
 
+  let finalId = id;
+  let finalInvoiceNumber = invoiceNumber;
+
   try {
+    // Check if ID or invoiceNumber already exists in the database
+    const existingCheck = await query(
+      "SELECT id, invoice_number, total, cashier_id, customer_phone FROM sales WHERE id = $1 OR invoice_number = $2",
+      [id, invoiceNumber]
+    );
+
+    if (existingCheck.rows.length > 0) {
+      // Collision detected! Let's check if it's a retry of the exact same sale
+      const existing = existingCheck.rows.find(row => row.id === id || row.invoice_number === invoiceNumber);
+      
+      // If it's the exact same sale (same customer phone, same cashier, and same total amount)
+      if (
+        existing.cashier_id === cashierId &&
+        Number(existing.total) === Number(total) &&
+        existing.customer_phone === customerPhone
+      ) {
+        console.log(`Identical sale found in DB (ID: ${existing.id}, Invoice: ${existing.invoice_number}). Returning success.`);
+        return res.status(200).json({
+          success: true,
+          id: existing.id,
+          invoiceNumber: existing.invoice_number
+        });
+      } else {
+        // Different sale! This is a real collision.
+        // We must generate a new unique ID and/or a new invoice number.
+        console.log(`Sale collision detected (ID: ${id}, Invoice: ${invoiceNumber}). Generating new values to force save...`);
+        
+        if (existingCheck.rows.some(row => row.id === id)) {
+          finalId = `s${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        }
+        
+        // Find maximum invoice number currently in DB to set next sequence
+        const maxInvoiceQuery = await query("SELECT MAX(CAST(invoice_number AS INTEGER)) as max_val FROM sales");
+        const maxVal = maxInvoiceQuery.rows[0].max_val || 100000;
+        finalInvoiceNumber = String(Number(maxVal) + 1);
+
+        console.log(`Generated new ID: ${finalId}, New Invoice: ${finalInvoiceNumber}`);
+      }
+    }
+
     // 1. Save Sale
     await query(
       `INSERT INTO sales (id, invoice_number, date, shift_day, customer_id, customer_name, customer_phone, car_brand, car_model, km, oil_used, oil_mileage, cashier_id, cashier_name, subtotal, discount, vat, total, payment_method, cash_amount, card_amount, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
       [
-        id,
-        invoiceNumber,
+        finalId,
+        finalInvoiceNumber,
         date,
         shiftDay,
         customerId,
@@ -587,12 +630,10 @@ app.post("/api/sales", async (req, res) => {
       await query(
         `INSERT INTO sale_items (sale_id, product_id, name, brand, unit_price, quantity)
          VALUES ($1, $2, $3, $4, $5, $6)`,
-        [id, item.productId, item.name, item.brand, item.unitPrice, item.quantity]
+        [finalId, item.productId, item.name, item.brand, item.unitPrice, item.quantity]
       );
 
-      // Decrement stock if not unlimited (handled on database or checked via is_unlimited)
-      // Wait, we can fetch product is_unlimited or just run standard stock reduction for all but if the product is unlimited we don't have to (or we can just query the product table to check)
-      // Actually, since saleService handles decrement logic client-side and we also sync, let's run:
+      // Decrement stock if not unlimited
       const prodCheck = await query("SELECT is_unlimited FROM products WHERE id = $1", [item.productId]);
       const isUnlimited = prodCheck.rows.length > 0 && prodCheck.rows[0].is_unlimited;
       if (!isUnlimited) {
@@ -622,7 +663,11 @@ app.post("/api/sales", async (req, res) => {
     invalidateCache("products");
     invalidateCache("shifts");
     invalidateCache("logs");
-    res.status(201).json({ success: true });
+    res.status(201).json({
+      success: true,
+      id: finalId,
+      invoiceNumber: finalInvoiceNumber
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

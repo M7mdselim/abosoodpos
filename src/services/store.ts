@@ -332,6 +332,13 @@ export const store = {
     });
   },
 
+  async updateSaleIdAndInvoice(oldId: string, newId: string, newInvoiceNumber: string) {
+    _sales = _sales.map((s) =>
+      s.id === oldId ? { ...s, id: newId, invoiceNumber: newInvoiceNumber } : s
+    );
+    await offlineDb.saveList("sales", _sales);
+  },
+
   reset() {
     this.customers = [];
     this.products = [];

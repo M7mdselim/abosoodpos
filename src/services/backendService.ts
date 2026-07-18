@@ -215,6 +215,14 @@ export const backendService = {
         body: JSON.stringify(sale),
       });
       if (!res.ok) throw new Error("Server rejected sale creation");
+      
+      const data = await res.json();
+      if (data.id && data.invoiceNumber) {
+        if (data.id !== sale.id || data.invoiceNumber !== sale.invoiceNumber) {
+          console.log(`Online sale ID/Invoice updated by server: ${sale.id} -> ${data.id}, ${sale.invoiceNumber} -> ${data.invoiceNumber}`);
+          await store.updateSaleIdAndInvoice(sale.id, data.id, data.invoiceNumber);
+        }
+      }
     } catch (err) {
       console.warn("Failed to create sale online, queueing offline:", err);
       await offlineDb.addToQueue("create_sale", sale);
@@ -474,6 +482,19 @@ export const backendService = {
         }
 
         if (res && res.ok) {
+          if (item.type === "create_sale") {
+            try {
+              const data = await res.json();
+              if (data.id && data.invoiceNumber) {
+                if (data.id !== item.payload.id || data.invoiceNumber !== item.payload.invoiceNumber) {
+                  console.log(`Sale ID/Invoice updated by server due to collision during sync: ${item.payload.id} -> ${data.id}, ${item.payload.invoiceNumber} -> ${data.invoiceNumber}`);
+                  await store.updateSaleIdAndInvoice(item.payload.id, data.id, data.invoiceNumber);
+                }
+              }
+            } catch (jsonErr) {
+              console.warn("Could not parse server response on sync creation:", jsonErr);
+            }
+          }
           await offlineDb.removeFromQueue(item.id);
           syncedCount++;
         } else {
