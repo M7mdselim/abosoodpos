@@ -28,13 +28,25 @@ export const saleService = {
   },
   create: (sale: Omit<Sale, "id" | "invoiceNumber" | "date" | "status">): Sale => {
     const nextNum = 100000 + store.sales.length + 1;
-    const activeShift = shiftService.getActiveShift();
+    const activeShift = shiftService.getShifts().find(
+      (s) => s.status === "open" && s.cashierId === sale.cashierId
+    );
+    
+    // Get local YYYY-MM-DD string instead of UTC toISOString
+    const getLocalDayStr = () => {
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     const created: Sale = {
       ...sale,
       id: `s${Date.now()}`,
       invoiceNumber: `${nextNum}`,
       date: new Date().toISOString(),
-      shiftDay: activeShift?.shiftDay || new Date().toISOString().split("T")[0],
+      shiftDay: activeShift?.shiftDay || getLocalDayStr(),
       status: "active",
     };
     store.sales = [created, ...store.sales];
