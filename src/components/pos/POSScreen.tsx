@@ -88,8 +88,8 @@ export function POSScreen() {
     }
   }, [isPrintingDirect, lastSale]);
 
-  // Read feature flag for VAT
-  const vatEnabled = localStorage.getItem("dev_feature_vat") !== "false";
+  // Read feature flag for VAT from store settings
+  const vatEnabled = store.settings.vatEnabled !== false;
   const VAT_RATE = vatEnabled ? 0.14 : 0.0;
 
   useEffect(() => {
@@ -417,7 +417,7 @@ export function POSScreen() {
               <div className="flex flex-wrap gap-1.5 mt-1 max-h-[115px] sm:max-h-none overflow-y-auto pr-1">
                 {popularProducts.map((p) => {
                   const isOutOfStock = !p.isUnlimited && p.stock <= 0;
-                  const stockAlertsEnabled = localStorage.getItem("dev_feature_stock_alerts") !== "false";
+                  const stockAlertsEnabled = store.settings.stockAlertsEnabled !== false;
                   
                   return (
                     <button
@@ -460,7 +460,7 @@ export function POSScreen() {
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
             {products.map((p) => {
               const isOutOfStock = !p.isUnlimited && p.stock <= 0;
-              const stockAlertsEnabled = localStorage.getItem("dev_feature_stock_alerts") !== "false";
+              const stockAlertsEnabled = store.settings.stockAlertsEnabled !== false;
 
               return (
                 <button

@@ -18,6 +18,8 @@ export interface AppSettings {
   autoBackupEnabled?: boolean;
   autoBackupTime?: string;
   lastAutoBackupDate?: string;
+  vatEnabled?: boolean;
+  stockAlertsEnabled?: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -38,6 +40,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   autoBackupEnabled: false,
   autoBackupTime: "22:00",
   lastAutoBackupDate: "",
+  vatEnabled: true,
+  stockAlertsEnabled: true,
 };
 
 const getLocal = <T>(key: string, fallback: T): T => {

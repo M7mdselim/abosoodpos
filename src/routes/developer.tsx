@@ -112,10 +112,10 @@ function DeveloperControlsPage() {
 
   // Feature Flags state
   const [vatEnabled, setVatEnabled] = useState(() => {
-    return localStorage.getItem("dev_feature_vat") !== "false";
+    return store.settings.vatEnabled !== false;
   });
   const [stockAlerts, setStockAlerts] = useState(() => {
-    return localStorage.getItem("dev_feature_stock_alerts") === "true";
+    return store.settings.stockAlertsEnabled !== false;
   });
 
   // App settings state
@@ -193,7 +193,13 @@ function DeveloperControlsPage() {
 
   const handleToggleVat = (checked: boolean) => {
     setVatEnabled(checked);
-    localStorage.setItem("dev_feature_vat", String(checked));
+    const updated = {
+      ...currentSettings,
+      vatEnabled: checked,
+    };
+    store.settings = updated;
+    backendService.saveSettings(updated).catch((err) => console.error("Error saving VAT setting in backend:", err));
+    router.invalidate();
     toast.success(
       language === "ar"
         ? `تم ${checked ? "تفعيل" : "تعطيل"} ضريبة القيمة المضافة`
@@ -203,7 +209,13 @@ function DeveloperControlsPage() {
 
   const handleToggleStockAlerts = (checked: boolean) => {
     setStockAlerts(checked);
-    localStorage.setItem("dev_feature_stock_alerts", String(checked));
+    const updated = {
+      ...currentSettings,
+      stockAlertsEnabled: checked,
+    };
+    store.settings = updated;
+    backendService.saveSettings(updated).catch((err) => console.error("Error saving stock alerts setting in backend:", err));
+    router.invalidate();
     toast.success(
       language === "ar"
         ? `تم ${checked ? "تفعيل" : "تعطيل"} تنبيهات المخزون المنخفض`

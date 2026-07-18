@@ -998,6 +998,8 @@ app.post("/api/dev/reset-db", async (req, res) => {
       autoBackupEnabled: "false",
       autoBackupTime: "22:00",
       lastAutoBackupDate: "",
+      vatEnabled: "true",
+      stockAlertsEnabled: "true",
     };
 
     for (const key of Object.keys(defaultSettings)) {
