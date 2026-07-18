@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useSession } from "@/context/RoleContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -7,6 +7,7 @@ import { authService } from "@/services/authService";
 import { store } from "@/services/store";
 import { backendService } from "@/services/backendService";
 import { shiftService } from "@/services/shiftService";
+import { offlineDb } from "@/services/offlineDb";
 import { PageShell } from "@/components/PageShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,50 @@ function DeveloperControlsPage() {
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [resetConfirmationText, setResetConfirmationText] = useState("");
   const [isResetting, setIsResetting] = useState(false);
+
+  // Offline Queue state
+  const [offlineQueue, setOfflineQueue] = useState<any[]>([]);
+  const [loadingQueue, setLoadingQueue] = useState(false);
+
+  const loadOfflineQueue = async () => {
+    setLoadingQueue(true);
+    try {
+      const queue = await offlineDb.getQueue();
+      setOfflineQueue(queue);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingQueue(false);
+    }
+  };
+
+  useEffect(() => {
+    loadOfflineQueue();
+    const handleQueueChange = () => {
+      loadOfflineQueue();
+    };
+    window.addEventListener("offline_queue_changed", handleQueueChange);
+    return () => {
+      window.removeEventListener("offline_queue_changed", handleQueueChange);
+    };
+  }, []);
+
+  const handleDeleteQueueItem = async (itemId: string) => {
+    const isAr = language === "ar";
+    const msg = isAr 
+      ? "هل أنت متأكد من حذف هذه العملية من طابور الانتظار؟ قد يؤدي هذا إلى فقدان البيانات الخاصة بها نهائياً." 
+      : "Are you sure you want to delete this item from the queue? This will permanently delete its offline data.";
+    if (!window.confirm(msg)) {
+      return;
+    }
+    try {
+      await offlineDb.removeFromQueue(itemId);
+      toast.success(isAr ? "تم إزالة العملية بنجاح!" : "Item removed from queue successfully!");
+      loadOfflineQueue();
+    } catch (err: any) {
+      toast.error(isAr ? "فشل الحذف" : "Failed to delete");
+    }
+  };
 
   const handleResetDatabase = async () => {
     if (resetConfirmationText !== "RESET" && resetConfirmationText !== "تأكيد") {
@@ -1104,6 +1149,80 @@ function DeveloperControlsPage() {
           </CardContent>
          </Card>
       </div>
+
+        {/* Offline Queue Manager */}
+        <Card className="border-amber-500/25 shadow-sm bg-card md:col-span-2 mt-6">
+          <CardHeader className="text-right">
+            <div className="flex items-start justify-between gap-4 flex-row-reverse">
+              <div>
+                <CardTitle className="text-foreground flex items-center gap-2 justify-end">
+                  <Sliders className="h-5 w-5 text-amber-600" />
+                  {language === "ar" ? "إدارة طابور العمليات غير المتزامنة (Offline Queue)" : "Offline Queue Manager"}
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  {language === "ar" 
+                    ? "عرض وحذف العمليات المعلقة التي تنتظر المزامنة مع السيرفر. مفيد جداً لحل حالات التعليق إذا فشل سجل معين في المزامنة."
+                    : "View and delete pending items waiting to sync with the server. Helpful for resolving conflicts if a record gets stuck."}
+                </CardDescription>
+              </div>
+              <span className="shrink-0 text-xs text-muted-foreground font-semibold bg-muted rounded-lg px-2.5 py-1 border border-border">
+                {offlineQueue.length} {language === "ar" ? "عملية معلقة" : "pending items"}
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {offlineQueue.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                {language === "ar" ? "لا توجد عمليات معلقة حالياً. طابور الانتظار فارغ تماماً!" : "No pending items. The queue is empty!"}
+              </p>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/50">
+                      <th className="text-right px-4 py-2.5 font-bold text-xs text-muted-foreground whitespace-nowrap">#</th>
+                      <th className="text-right px-4 py-2.5 font-bold text-xs text-muted-foreground whitespace-nowrap">{language === "ar" ? "نوع العملية" : "Type"}</th>
+                      <th className="text-right px-4 py-2.5 font-bold text-xs text-muted-foreground whitespace-nowrap">{language === "ar" ? "المعرف" : "ID"}</th>
+                      <th className="text-right px-4 py-2.5 font-bold text-xs text-muted-foreground whitespace-nowrap">{language === "ar" ? "وقت الإنشاء" : "Created At"}</th>
+                      <th className="text-right px-4 py-2.5 font-bold text-xs text-muted-foreground whitespace-nowrap">{language === "ar" ? "تفاصيل" : "Details"}</th>
+                      <th className="text-right px-4 py-2.5 font-bold text-xs text-muted-foreground whitespace-nowrap">{language === "ar" ? "إجراءات" : "Actions"}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {offlineQueue.map((item, i) => (
+                      <tr key={item.id} className={`border-b border-border last:border-0 ${i % 2 === 0 ? "bg-card" : "bg-muted/20"}`}>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground font-semibold">{i + 1}</td>
+                        <td className="px-4 py-2.5">
+                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-700">
+                            {item.type}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{item.id.slice(-8)}</td>
+                        <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
+                          {new Date(item.createdAt).toLocaleString(language === "ar" ? "ar-EG" : "en-US")}
+                        </td>
+                        <td className="px-4 py-2.5 text-xs max-w-xs truncate text-muted-foreground" title={JSON.stringify(item.payload)}>
+                          {JSON.stringify(item.payload)}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs gap-1 text-destructive hover:bg-destructive/10"
+                            onClick={() => handleDeleteQueueItem(item.id)}
+                          >
+                            <X className="h-3 w-3" />
+                            {language === "ar" ? "حذف وتخطي" : "Delete & Skip"}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
       {/* Danger Zone: Database Reset */}
       <div className="mt-6">
