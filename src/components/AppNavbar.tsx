@@ -20,6 +20,9 @@ import { useSession } from "@/context/RoleContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
 import { store } from "@/services/store";
+import { offlineDb } from "@/services/offlineDb";
+import { backendService } from "@/services/backendService";
+import { toast } from "sonner";
 
 interface NavItem {
   to: string;
@@ -140,6 +143,35 @@ export function AppNavbar() {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const closeTimeoutRef = useRef<number | null>(null);
+
+  const [isOnline, setIsOnline] = useState(() => typeof window !== "undefined" ? navigator.onLine : true);
+  const [queueCount, setQueueCount] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateOnlineStatus = () => setIsOnline(navigator.onLine);
+    const updateQueueCount = async () => {
+      try {
+        const queue = await offlineDb.getQueue();
+        setQueueCount(queue.length);
+      } catch (err) {
+        console.error("Failed to read offline queue size:", err);
+      }
+    };
+
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+    window.addEventListener("offline_queue_changed", updateQueueCount);
+
+    updateQueueCount();
+
+    return () => {
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
+      window.removeEventListener("offline_queue_changed", updateQueueCount);
+    };
+  }, []);
 
   const handleMouseEnter = (key: string) => {
     if (closeTimeoutRef.current) {
@@ -289,6 +321,42 @@ export function AppNavbar() {
 
         {/* Right side: User information & Logout */}
         <div className="flex items-center gap-4">
+          {/* Connection Status Pill */}
+          <div className="flex items-center">
+            {!isOnline ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-black text-destructive border border-destructive/20 animate-pulse">
+                <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+                <span>غير متصل</span>
+                {queueCount > 0 && (
+                  <span className="bg-destructive text-destructive-foreground px-1.5 py-0.2 rounded-full text-[10px]">
+                    {queueCount} معلقة
+                  </span>
+                )}
+              </span>
+            ) : queueCount > 0 ? (
+              <button
+                onClick={async () => {
+                  try {
+                    toast.info("جاري مزامنة العمليات المعلقة...");
+                    await backendService.syncOfflineQueue();
+                    toast.success("تمت المزامنة بنجاح!");
+                  } catch (err) {
+                    toast.error("فشلت المزامنة، يرجى المحاولة لاحقاً");
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-black text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-colors cursor-pointer"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-ping" />
+                <span>مزامنة ({queueCount})</span>
+              </button>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-black text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span>متصل</span>
+              </span>
+            )}
+          </div>
+
           <div className="hidden sm:flex items-center gap-2 rounded-lg bg-muted border border-border/30 px-3 py-1.5 text-xs">
             <div className="text-right">
               <div className="font-bold leading-tight text-foreground">{session.name}</div>

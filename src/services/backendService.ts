@@ -1,4 +1,5 @@
 import { store } from "./store";
+import { offlineDb } from "./offlineDb";
 import type { Customer, Product, Sale, User } from "@/types";
 import type { Shift } from "./shiftService";
 import type { UserLogEntry } from "./userLogService";
@@ -17,9 +18,19 @@ export const backendService = {
       // 2. Sync Customers
       const custRes = await fetch("/api/customers");
       if (!custRes.ok) throw new Error(`Customers sync: ${custRes.status}`);
-      const customers = await custRes.json();
+      let customers = await custRes.json();
       if (customers) {
-        store.customers = customers;
+        const queue = await offlineDb.getQueue();
+        const pendingCustomers = queue
+          .filter((item) => item.type === "create_customer")
+          .map((item) => item.payload);
+        const updatedCustomersMap = new Map(
+          queue
+            .filter((item) => item.type === "update_customer")
+            .map((item) => [item.payload.id, item.payload])
+        );
+        customers = customers.map((c: any) => updatedCustomersMap.get(c.id) || c);
+        store.customers = [...pendingCustomers, ...customers];
       }
 
       // 3. Sync Sales
@@ -27,7 +38,11 @@ export const backendService = {
       if (!salesRes.ok) throw new Error(`Sales sync: ${salesRes.status}`);
       const sales = await salesRes.json();
       if (sales) {
-        store.sales = sales;
+        const queue = await offlineDb.getQueue();
+        const pendingSales = queue
+          .filter((item) => item.type === "create_sale")
+          .map((item) => item.payload);
+        store.sales = [...pendingSales, ...sales];
       }
 
       // 4. Sync Settings
@@ -122,28 +137,58 @@ export const backendService = {
 
   // Customers
   async createCustomer(customer: Customer): Promise<void> {
-    await fetch("/api/customers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(customer),
-    });
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      await offlineDb.addToQueue("create_customer", customer);
+      return;
+    }
+    try {
+      const res = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(customer),
+      });
+      if (!res.ok) throw new Error("Server rejected customer creation");
+    } catch (err) {
+      console.warn("Failed to create customer online, queueing offline:", err);
+      await offlineDb.addToQueue("create_customer", customer);
+    }
   },
 
   async updateCustomer(id: string, customer: Customer): Promise<void> {
-    await fetch(`/api/customers/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(customer),
-    });
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      await offlineDb.addToQueue("update_customer", customer);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/customers/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(customer),
+      });
+      if (!res.ok) throw new Error("Server rejected customer update");
+    } catch (err) {
+      console.warn("Failed to update customer online, queueing offline:", err);
+      await offlineDb.addToQueue("update_customer", customer);
+    }
   },
 
   // Sales
   async createSale(sale: Sale): Promise<void> {
-    await fetch("/api/sales", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(sale),
-    });
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      await offlineDb.addToQueue("create_sale", sale);
+      return;
+    }
+    try {
+      const res = await fetch("/api/sales", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sale),
+      });
+      if (!res.ok) throw new Error("Server rejected sale creation");
+    } catch (err) {
+      console.warn("Failed to create sale online, queueing offline:", err);
+      await offlineDb.addToQueue("create_sale", sale);
+    }
   },
 
   async voidSale(id: string): Promise<void> {
@@ -265,4 +310,49 @@ export const backendService = {
       throw new Error(err.error || "Failed to reset database");
     }
   },
+
+  async syncOfflineQueue(): Promise<void> {
+    const queue = await offlineDb.getQueue();
+    if (queue.length === 0) return;
+
+    console.log(`Starting synchronization of ${queue.length} offline items...`);
+    
+    for (const item of queue) {
+      try {
+        let res;
+        if (item.type === "create_sale") {
+          res = await fetch("/api/sales", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(item.payload),
+          });
+        } else if (item.type === "create_customer") {
+          res = await fetch("/api/customers", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(item.payload),
+          });
+        } else if (item.type === "update_customer") {
+          res = await fetch(`/api/customers/${item.payload.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(item.payload),
+          });
+        }
+
+        if (res && res.ok) {
+          await offlineDb.removeFromQueue(item.id);
+        } else {
+          const errText = res ? await res.text() : "No response";
+          throw new Error(`Server returned error during sync: ${errText}`);
+        }
+      } catch (err) {
+        console.error(`Sync error on item ${item.id} of type ${item.type}:`, err);
+        throw err;
+      }
+    }
+
+    // Refresh memory store from database after full synchronization
+    await this.syncFromBackend();
+  }
 };

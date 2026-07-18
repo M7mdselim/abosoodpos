@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { backendService } from "./services/backendService";
 import { store } from "./services/store";
 import { toast } from "sonner";
+import { offlineDb } from "./services/offlineDb";
 
 const router = getRouter();
 
@@ -35,6 +36,35 @@ export default function App() {
     }
     initDb();
   }, []);
+
+  // Listen to network status to trigger auto-sync
+  useEffect(() => {
+    if (syncing) return;
+
+    const triggerSync = async () => {
+      if (typeof window === "undefined" || !navigator.onLine) return;
+      try {
+        const queue = await offlineDb.getQueue();
+        if (queue.length > 0) {
+          toast.info(`🔄 جاري مزامنة عدد ${queue.length} من العمليات المعلقة...`);
+          await backendService.syncOfflineQueue();
+          toast.success("✅ تم مزامنة جميع العمليات المعلقة بنجاح!");
+        }
+      } catch (err) {
+        console.warn("Auto-sync of offline queue failed, will retry later:", err);
+      }
+    };
+
+    window.addEventListener("online", triggerSync);
+    // Trigger on startup if online
+    if (navigator.onLine) {
+      triggerSync();
+    }
+
+    return () => {
+      window.removeEventListener("online", triggerSync);
+    };
+  }, [syncing]);
 
   // Shared auto-backup download function
   const runAutoBackup = async () => {
