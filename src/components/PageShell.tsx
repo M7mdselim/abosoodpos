@@ -24,7 +24,22 @@ export function PageShell({
         </div>
         {actions && <div className="flex items-center gap-2">{actions}</div>}
       </header>
-      <div className="flex-1 overflow-auto p-3 sm:p-6">{children}</div>
+      <div className="flex-1 overflow-auto p-3 sm:p-6">
+        {children}
+        <footer className="mt-10 pb-2 text-center print:hidden">
+          <span className="text-[10px] font-semibold text-muted-foreground/50 tracking-wide">
+            Powered by{" "}
+            <a
+              href="https://seliosolutions.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-black text-muted-foreground/70 hover:text-primary transition-colors"
+            >
+              Selio Solutions
+            </a>
+          </span>
+        </footer>
+      </div>
     </div>
   );
 }
