@@ -41,12 +41,23 @@ export const saleService = {
       return `${year}-${month}-${day}`;
     };
 
+    const shiftDay = activeShift?.shiftDay || getLocalDayStr();
+    
+    // Construct local Date using the shiftDay date and the current clock time
+    const getShiftDateTimeISO = (day: string) => {
+      const now = new Date();
+      const timePart = now.toTimeString().split(" ")[0]; // "HH:MM:SS"
+      const ms = String(now.getMilliseconds()).padStart(3, '0');
+      const localDate = new Date(`${day}T${timePart}.${ms}`);
+      return isNaN(localDate.getTime()) ? now.toISOString() : localDate.toISOString();
+    };
+
     const created: Sale = {
       ...sale,
       id: `s${Date.now()}`,
       invoiceNumber: `${nextNum}`,
-      date: new Date().toISOString(),
-      shiftDay: activeShift?.shiftDay || getLocalDayStr(),
+      date: getShiftDateTimeISO(shiftDay),
+      shiftDay: shiftDay,
       status: "active",
     };
     store.sales = [created, ...store.sales];

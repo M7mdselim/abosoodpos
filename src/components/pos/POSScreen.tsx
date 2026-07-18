@@ -167,10 +167,29 @@ export function POSScreen() {
 
   const draftSale = useMemo(() => {
     if (items.length === 0) return null;
+    const cashierShift = shiftService.getShifts().find(
+      (s) => s.status === "open" && s.cashierId === (session?.id || "u_cashier")
+    );
+    const getLocalDayStr = () => {
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    const shiftDay = cashierShift?.shiftDay || getLocalDayStr();
+    const getShiftDateTimeISO = (day: string) => {
+      const now = new Date();
+      const timePart = now.toTimeString().split(" ")[0];
+      const ms = String(now.getMilliseconds()).padStart(3, '0');
+      const localDate = new Date(`${day}T${timePart}.${ms}`);
+      return isNaN(localDate.getTime()) ? now.toISOString() : localDate.toISOString();
+    };
+
     return {
       id: "draft",
       invoiceNumber: "XXXXXX",
-      date: new Date().toISOString(),
+      date: getShiftDateTimeISO(shiftDay),
       customerId: customer?.id || "walkin",
       customerName: customer?.name || "عميل سفري",
       customerPhone: customer?.phone || "—",
@@ -192,6 +211,7 @@ export function POSScreen() {
       total: total,
       paymentMethod: "Cash" as const,
       status: "active" as const,
+      shiftDay: shiftDay,
     };
   }, [items, customer, activeCar, currentKm, subtotal, discount, vat, total, session]);
 
