@@ -289,7 +289,7 @@ app.post("/api/customers", async (req, res) => {
         await query(
           `INSERT INTO customer_cars (id, customer_id, brand, model, current_km, last_service_date, last_oil_used, last_oil_mileage)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [car.id, id, car.brand, car.model, car.currentKm || 0, car.lastServiceDate || null, car.lastOilUsed || null, car.lastOilMileage || null]
+          [car.id || `car_${Date.now()}`, id, car.brand || "", car.model || "", car.currentKm || 0, car.lastServiceDate || null, car.lastOilUsed || null, car.lastOilMileage || null]
         );
       }
     }
@@ -318,7 +318,7 @@ app.put("/api/customers/:id", async (req, res) => {
         await query(
           `INSERT INTO customer_cars (id, customer_id, brand, model, current_km, last_service_date, last_oil_used, last_oil_mileage)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [car.id, id, car.brand, car.model, car.currentKm || 0, car.lastServiceDate || null, car.lastOilUsed || null, car.lastOilMileage || null]
+          [car.id || `car_${Date.now()}`, id, car.brand || "", car.model || "", car.currentKm || 0, car.lastServiceDate || null, car.lastOilUsed || null, car.lastOilMileage || null]
         );
       }
     }
