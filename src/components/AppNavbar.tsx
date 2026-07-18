@@ -386,6 +386,13 @@ export function AppNavbar() {
             )}
           </div>
 
+          {shiftDay && (
+            <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-black text-primary border border-primary/20">
+              <CalendarDays className="h-3.5 w-3.5" />
+              <span>الوردية: {shiftDay}</span>
+            </div>
+          )}
+
           <div className="hidden sm:flex items-center gap-2 rounded-lg bg-muted border border-border/30 px-3 py-1.5 text-xs">
             <div className="text-right">
               <div className="font-bold leading-tight text-foreground">{session.name}</div>
