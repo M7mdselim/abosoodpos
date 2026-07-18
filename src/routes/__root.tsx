@@ -111,6 +111,19 @@ function LayoutWrapper() {
       <main className="flex-1 overflow-hidden relative">
         <Outlet />
       </main>
+      <footer className="shrink-0 border-t border-border/40 bg-muted/30 px-4 py-1.5 text-center print:hidden">
+        <span className="text-[10px] font-semibold text-muted-foreground/60 tracking-wide">
+          Powered by{" "}
+          <a
+            href="https://selio.solutions"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-black text-muted-foreground/80 hover:text-primary transition-colors"
+          >
+            Selio Solutions
+          </a>
+        </span>
+      </footer>
       <Toaster richColors position="top-center" />
     </div>
   );
