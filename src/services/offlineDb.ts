@@ -115,6 +115,28 @@ class OfflineDb {
     }
   }
 
+  private obfuscate(obj: any): any {
+    try {
+      const json = JSON.stringify(obj);
+      const encoded = btoa(unescape(encodeURIComponent(json)));
+      return { id: obj.id, data: encoded };
+    } catch (e) {
+      console.error("Obfuscation error:", e);
+      return obj;
+    }
+  }
+
+  private deobfuscate(record: any): any {
+    if (!record || !record.data) return record;
+    try {
+      const decoded = decodeURIComponent(escape(atob(record.data)));
+      return JSON.parse(decoded);
+    } catch (e) {
+      console.error("Deobfuscation error:", e);
+      return record;
+    }
+  }
+
   async saveList(storeName: "customers" | "products" | "sales", list: any[]): Promise<void> {
     try {
       const db = await this.getDB();
@@ -132,7 +154,8 @@ class OfflineDb {
           }
           let count = 0;
           list.forEach((item) => {
-            const putReq = store.put(item);
+            const processedItem = storeName === "customers" ? this.obfuscate(item) : item;
+            const putReq = store.put(processedItem);
             putReq.onerror = () => reject(putReq.error);
             putReq.onsuccess = () => {
               count++;
@@ -155,7 +178,14 @@ class OfflineDb {
         const tx = db.transaction(storeName, "readonly");
         const store = tx.objectStore(storeName);
         const request = store.getAll();
-        request.onsuccess = () => resolve(request.result || []);
+        request.onsuccess = () => {
+          const results = request.result || [];
+          if (storeName === "customers") {
+            resolve(results.map((r) => this.deobfuscate(r)));
+          } else {
+            resolve(results);
+          }
+        };
         request.onerror = () => reject(request.error);
       });
     } catch (err) {
