@@ -461,6 +461,12 @@ export function AppNavbar() {
               <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-1">
                 {session.role}
               </div>
+              {shiftDay && (
+                <div className="text-[10px] text-primary font-bold mt-2.5 flex items-center justify-end gap-1.5 border-t border-border/20 pt-2">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  <span>تاريخ الوردية: {shiftDay}</span>
+                </div>
+              )}
             </div>
 
             {/* List of Navigation Links Grouped by Category */}
