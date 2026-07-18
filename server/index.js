@@ -586,10 +586,21 @@ app.post("/api/sales", async (req, res) => {
           finalId = `s${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
         }
         
-        // Find maximum invoice number currently in DB to set next sequence
-        const maxInvoiceQuery = await query("SELECT MAX(CAST(invoice_number AS INTEGER)) as max_val FROM sales");
-        const maxVal = maxInvoiceQuery.rows[0].max_val || 100000;
-        finalInvoiceNumber = String(Number(maxVal) + 1);
+        // Find maximum invoice number currently in DB safely by extracting all numeric values
+        const allInvoices = await query("SELECT invoice_number FROM sales");
+        const numericValues = [];
+        for (const row of allInvoices.rows) {
+          const digitsMatch = row.invoice_number.match(/\d+/);
+          if (digitsMatch) {
+            numericValues.push(parseInt(digitsMatch[0], 10));
+          }
+        }
+        const maxVal = numericValues.length > 0 ? Math.max(...numericValues) : 100000;
+        
+        // Match the prefix from the client-provided invoice number (e.g. "INV-")
+        const clientMatch = invoiceNumber.match(/^([^\d]*)/);
+        const prefix = clientMatch ? clientMatch[0] : "";
+        finalInvoiceNumber = `${prefix}${maxVal + 1}`;
 
         console.log(`Generated new ID: ${finalId}, New Invoice: ${finalInvoiceNumber}`);
       }
