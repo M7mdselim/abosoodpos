@@ -25,6 +25,7 @@ import { shiftService } from "@/services/shiftService";
 import { useSession } from "@/context/RoleContext";
 import { store } from "@/services/store";
 import { formatCurrency, formatDateTime } from "@/utils/format";
+import { offlineDb } from "@/services/offlineDb";
 import type { Sale, PaymentMethod } from "@/types";
 
 export const Route = createFileRoute("/receipts")({
@@ -60,6 +61,25 @@ function ReceiptsPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
+
+  const [pendingSaleIds, setPendingSaleIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const updatePending = async () => {
+      try {
+        const queue = await offlineDb.getQueue();
+        const ids = new Set(
+          queue.filter((item) => item.type === "create_sale").map((item) => item.payload.id)
+        );
+        setPendingSaleIds(ids);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    updatePending();
+    window.addEventListener("offline_queue_changed", updatePending);
+    return () => window.removeEventListener("offline_queue_changed", updatePending);
+  }, []);
 
   // Compute unique cashiers for filter dropdown
   const cashiers = useMemo(() => {
@@ -366,9 +386,16 @@ function ReceiptsPage() {
                   </TableCell>
                   <TableCell className="font-bold text-primary whitespace-nowrap">{formatCurrency(s.total)}</TableCell>
                   <TableCell>
-                    <Badge variant={isVoided ? "destructive" : "default"} className="text-[10px]">
-                      {isVoided ? "ملغاة" : "نشطة"}
-                    </Badge>
+                    <div className="flex flex-col gap-1 items-start">
+                      <Badge variant={isVoided ? "destructive" : "default"} className="text-[10px] py-0.5">
+                        {isVoided ? "ملغاة" : "نشطة"}
+                      </Badge>
+                      {pendingSaleIds.has(s.id) && (
+                        <Badge variant="outline" className="text-[9px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 font-bold whitespace-nowrap">
+                          ⚠️ غير متزامن
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-left">
                     <div className="flex gap-1">
@@ -428,6 +455,11 @@ function ReceiptsPage() {
                   <Badge variant={isVoided ? "destructive" : "default"} className="text-[10px] px-2 py-0.5 font-bold">
                     {isVoided ? "ملغاة" : "نشطة"}
                   </Badge>
+                  {pendingSaleIds.has(s.id) && (
+                    <Badge variant="outline" className="text-[9px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 font-bold">
+                      ⚠️ غير متزامن
+                    </Badge>
+                  )}
                   <span className="text-[10px] text-muted-foreground font-semibold">
                     {new Date(s.date).toLocaleDateString("ar-EG")}
                   </span>

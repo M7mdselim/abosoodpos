@@ -316,6 +316,8 @@ export const backendService = {
     if (queue.length === 0) return;
 
     console.log(`Starting synchronization of ${queue.length} offline items...`);
+    let syncedCount = 0;
+    let failedCount = 0;
     
     for (const item of queue) {
       try {
@@ -342,17 +344,41 @@ export const backendService = {
 
         if (res && res.ok) {
           await offlineDb.removeFromQueue(item.id);
+          syncedCount++;
         } else {
+          // Check if the error is a duplicate key (item already synced previously)
           const errText = res ? await res.text() : "No response";
-          throw new Error(`Server returned error during sync: ${errText}`);
+          const isDuplicate = errText.includes("duplicate key") || errText.includes("already exists") || errText.includes("unique constraint");
+          
+          if (isDuplicate) {
+            // Item is already in the database — safely remove from queue
+            console.warn(`Item ${item.id} already exists in database, removing from queue.`);
+            await offlineDb.removeFromQueue(item.id);
+            syncedCount++;
+          } else {
+            console.error(`Sync error on item ${item.id} (${item.type}): ${errText}`);
+            failedCount++;
+            // Continue to next item instead of aborting
+          }
         }
       } catch (err) {
-        console.error(`Sync error on item ${item.id} of type ${item.type}:`, err);
-        throw err;
+        console.error(`Network error syncing item ${item.id} of type ${item.type}:`, err);
+        failedCount++;
+        // Continue to next item instead of aborting
       }
     }
 
-    // Refresh memory store from database after full synchronization
-    await this.syncFromBackend();
+    console.log(`Sync complete: ${syncedCount} synced, ${failedCount} failed.`);
+
+    // Refresh memory store from database after synchronization
+    try {
+      await this.syncFromBackend();
+    } catch (err) {
+      console.warn("Post-sync backend refresh failed:", err);
+    }
+
+    if (failedCount > 0) {
+      throw new Error(`${failedCount} items failed to sync`);
+    }
   }
 };

@@ -41,8 +41,10 @@ export default function App() {
   useEffect(() => {
     if (syncing) return;
 
+    let isSyncing = false;
     const triggerSync = async () => {
-      if (typeof window === "undefined" || !navigator.onLine) return;
+      if (typeof window === "undefined" || !navigator.onLine || isSyncing) return;
+      isSyncing = true;
       try {
         const queue = await offlineDb.getQueue();
         if (queue.length > 0) {
@@ -50,8 +52,15 @@ export default function App() {
           await backendService.syncOfflineQueue();
           toast.success("✅ تم مزامنة جميع العمليات المعلقة بنجاح!");
         }
-      } catch (err) {
-        console.warn("Auto-sync of offline queue failed, will retry later:", err);
+      } catch (err: any) {
+        const msg = err?.message || "";
+        if (msg.includes("failed to sync")) {
+          toast.warning(`⚠️ تم مزامنة بعض العمليات، لكن بعضها فشل. سيتم المحاولة مرة أخرى لاحقاً.`);
+        } else {
+          console.warn("Auto-sync of offline queue failed, will retry later:", err);
+        }
+      } finally {
+        isSyncing = false;
       }
     };
 
