@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { store } from "@/services/store";
 import { offlineDb } from "@/services/offlineDb";
 import { backendService } from "@/services/backendService";
+import { shiftService } from "@/services/shiftService";
 import { toast } from "sonner";
 
 interface NavItem {
