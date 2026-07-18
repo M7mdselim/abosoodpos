@@ -7,14 +7,21 @@ function ensureCustomerCars(c: Customer): Customer {
     c.cars = [
       {
         id: "default",
-        brand: c.carBrand,
-        model: c.carModel,
-        currentKm: c.currentKm,
+        brand: c.carBrand || "",
+        model: c.carModel || "",
+        currentKm: c.currentKm || 0,
         lastServiceDate: c.lastServiceDate,
         lastOilUsed: c.lastOilUsed,
         lastOilMileage: c.lastOilMileage,
       },
     ];
+  } else {
+    // Sanitize any existing cars with null brand/model
+    c.cars = c.cars.map((car) => ({
+      ...car,
+      brand: car.brand || "",
+      model: car.model || "",
+    }));
   }
   return c;
 }
@@ -42,9 +49,9 @@ export const customerService = {
       customer.cars = [
         {
           id: "default",
-          brand: customer.carBrand,
-          model: customer.carModel,
-          currentKm: customer.currentKm,
+          brand: customer.carBrand || "",
+          model: customer.carModel || "",
+          currentKm: customer.currentKm || 0,
           lastServiceDate: customer.lastServiceDate,
           lastOilUsed: customer.lastOilUsed,
           lastOilMileage: customer.lastOilMileage,

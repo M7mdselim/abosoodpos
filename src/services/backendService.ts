@@ -192,9 +192,19 @@ export const backendService = {
   },
 
   async voidSale(id: string): Promise<void> {
-    await fetch(`/api/sales/${id}/void`, {
-      method: "POST",
-    });
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      await offlineDb.addToQueue("void_sale", { id });
+      return;
+    }
+    try {
+      const res = await fetch(`/api/sales/${id}/void`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Server rejected void sale");
+    } catch (err) {
+      console.warn("Failed to void sale online, queueing offline:", err);
+      await offlineDb.addToQueue("void_sale", { id });
+    }
   },
 
   async updatePaymentMethod(
@@ -203,11 +213,22 @@ export const backendService = {
     cashAmount?: number,
     cardAmount?: number
   ): Promise<void> {
-    await fetch(`/api/sales/${saleId}/payment`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paymentMethod, cashAmount, cardAmount }),
-    });
+    const payload = { saleId, paymentMethod, cashAmount, cardAmount };
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      await offlineDb.addToQueue("update_payment", payload);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/sales/${saleId}/payment`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentMethod, cashAmount, cardAmount }),
+      });
+      if (!res.ok) throw new Error("Server rejected payment update");
+    } catch (err) {
+      console.warn("Failed to update payment online, queueing offline:", err);
+      await offlineDb.addToQueue("update_payment", payload);
+    }
   },
 
   // Shifts
@@ -250,11 +271,21 @@ export const backendService = {
 
   // User Logs
   async createUserLog(log: UserLogEntry): Promise<void> {
-    await fetch("/api/logs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(log),
-    });
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      await offlineDb.addToQueue("create_log", log);
+      return;
+    }
+    try {
+      const res = await fetch("/api/logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(log),
+      });
+      if (!res.ok) throw new Error("Server rejected log creation");
+    } catch (err) {
+      console.warn("Failed to create log online, queueing offline:", err);
+      await offlineDb.addToQueue("create_log", log);
+    }
   },
 
   async clearUserLogs(): Promise<void> {
@@ -369,6 +400,26 @@ export const backendService = {
           });
         } else if (item.type === "close_shift") {
           res = await fetch("/api/shifts/close", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(item.payload),
+          });
+        } else if (item.type === "void_sale") {
+          res = await fetch(`/api/sales/${item.payload.id}/void`, {
+            method: "POST",
+          });
+        } else if (item.type === "update_payment") {
+          res = await fetch(`/api/sales/${item.payload.saleId}/payment`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              paymentMethod: item.payload.paymentMethod,
+              cashAmount: item.payload.cashAmount,
+              cardAmount: item.payload.cardAmount,
+            }),
+          });
+        } else if (item.type === "create_log") {
+          res = await fetch("/api/logs", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(item.payload),
