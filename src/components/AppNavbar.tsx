@@ -147,6 +147,28 @@ export function AppNavbar() {
 
   const [isOnline, setIsOnline] = useState(() => typeof window !== "undefined" ? navigator.onLine : true);
   const [queueCount, setQueueCount] = useState(0);
+  const [shiftDay, setShiftDay] = useState<string>("");
+
+  useEffect(() => {
+    const updateShiftDay = () => {
+      if (!session) return;
+      const cashierShifts = shiftService.getShifts().filter((sh) => sh.cashierId === session.id);
+      const activeShift = cashierShifts.find((s) => s.status === "open");
+      if (activeShift) {
+        setShiftDay(activeShift.shiftDay);
+      } else {
+        setShiftDay("");
+      }
+    };
+
+    updateShiftDay();
+    window.addEventListener("storage", updateShiftDay);
+    const interval = setInterval(updateShiftDay, 3000);
+    return () => {
+      window.removeEventListener("storage", updateShiftDay);
+      clearInterval(interval);
+    };
+  }, [session]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
