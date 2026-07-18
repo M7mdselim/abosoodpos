@@ -1,6 +1,6 @@
 export interface SyncItem {
   id: string;
-  type: "create_sale" | "create_customer" | "update_customer";
+  type: "create_sale" | "create_customer" | "update_customer" | "open_shift" | "close_shift";
   payload: any;
   createdAt: string;
 }

@@ -212,19 +212,40 @@ export const backendService = {
 
   // Shifts
   async openShift(shift: Shift): Promise<void> {
-    await fetch("/api/shifts/open", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(shift),
-    });
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      await offlineDb.addToQueue("open_shift", shift);
+      return;
+    }
+    try {
+      const res = await fetch("/api/shifts/open", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(shift),
+      });
+      if (!res.ok) throw new Error("Server rejected shift open");
+    } catch (err) {
+      console.warn("Failed to open shift online, queueing offline:", err);
+      await offlineDb.addToQueue("open_shift", shift);
+    }
   },
 
   async closeShift(shiftId: string, actualCash: number, notes: string, endTime: string): Promise<void> {
-    await fetch("/api/shifts/close", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shiftId, actualCash, notes, endTime }),
-    });
+    const payload = { shiftId, actualCash, notes, endTime };
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      await offlineDb.addToQueue("close_shift", payload);
+      return;
+    }
+    try {
+      const res = await fetch("/api/shifts/close", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Server rejected shift close");
+    } catch (err) {
+      console.warn("Failed to close shift online, queueing offline:", err);
+      await offlineDb.addToQueue("close_shift", payload);
+    }
   },
 
   // User Logs
@@ -337,6 +358,18 @@ export const backendService = {
         } else if (item.type === "update_customer") {
           res = await fetch(`/api/customers/${item.payload.id}`, {
             method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(item.payload),
+          });
+        } else if (item.type === "open_shift") {
+          res = await fetch("/api/shifts/open", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(item.payload),
+          });
+        } else if (item.type === "close_shift") {
+          res = await fetch("/api/shifts/close", {
+            method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(item.payload),
           });
