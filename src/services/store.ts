@@ -1,4 +1,5 @@
 import type { Customer, Product, Sale, User } from "@/types";
+import { offlineDb } from "./offlineDb";
 
 export interface AppSettings {
   companyNameAr: string;
@@ -61,9 +62,9 @@ const setLocal = <T>(key: string, val: T): void => {
   }
 };
 
-let _customers = getLocal<Customer[]>("pos_customers", []);
-let _products = getLocal<Product[]>("pos_products", []);
-let _sales = getLocal<Sale[]>("pos_sales", []);
+let _customers: Customer[] = [];
+let _products: Product[] = [];
+let _sales: Sale[] = [];
 let _users = getLocal<User[]>("pos_users", []).map((u) => {
   return {
     ...u,
@@ -143,7 +144,7 @@ export const store = {
   },
   set customers(val: Customer[]) {
     _customers = val;
-    setLocal("pos_customers", val);
+    offlineDb.saveList("customers", val);
   },
 
   get products() {
@@ -151,7 +152,7 @@ export const store = {
   },
   set products(val: Product[]) {
     _products = val;
-    setLocal("pos_products", val);
+    offlineDb.saveList("products", val);
   },
 
   get sales() {
@@ -159,7 +160,7 @@ export const store = {
   },
   set sales(val: Sale[]) {
     _sales = val;
-    setLocal("pos_sales", val);
+    offlineDb.saveList("sales", val);
   },
 
   get users() {
@@ -245,6 +246,58 @@ export const store = {
   setCarBrandsFromSync(val: { label: string; value: string }[]) {
     _carBrands = val;
     setLocal("pos_car_brands", val);
+  },
+
+  async initStore() {
+    if (typeof window === "undefined") return;
+
+    // 1. Check if we need to migrate from LocalStorage to IndexedDB
+    const localCustomers = localStorage.getItem("pos_customers");
+    const localProducts = localStorage.getItem("pos_products");
+    const localSales = localStorage.getItem("pos_sales");
+
+    if (localCustomers !== null || localProducts !== null || localSales !== null) {
+      console.log("Migrating local storage data to IndexedDB...");
+      
+      let custs: Customer[] = [];
+      let prods: Product[] = [];
+      let sls: Sale[] = [];
+
+      try {
+        if (localCustomers) custs = JSON.parse(localCustomers);
+      } catch (e) { console.error("Error parsing localCustomers for migration", e); }
+
+      try {
+        if (localProducts) prods = JSON.parse(localProducts);
+      } catch (e) { console.error("Error parsing localProducts for migration", e); }
+
+      try {
+        if (localSales) sls = JSON.parse(localSales);
+      } catch (e) { console.error("Error parsing localSales for migration", e); }
+
+      // Save to IndexedDB
+      await offlineDb.saveList("customers", custs);
+      await offlineDb.saveList("products", prods);
+      await offlineDb.saveList("sales", sls);
+
+      // Clean up localStorage to reclaim 5 MB space
+      localStorage.removeItem("pos_customers");
+      localStorage.removeItem("pos_products");
+      localStorage.removeItem("pos_sales");
+
+      console.log("Migration to IndexedDB complete!");
+    }
+
+    // 2. Load lists from IndexedDB into memory
+    _customers = await offlineDb.getList("customers");
+    _products = await offlineDb.getList("products");
+    _sales = await offlineDb.getList("sales");
+
+    console.log("Store loaded from IndexedDB:", {
+      customers: _customers.length,
+      products: _products.length,
+      sales: _sales.length,
+    });
   },
 
   reset() {

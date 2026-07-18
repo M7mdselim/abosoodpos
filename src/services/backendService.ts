@@ -114,25 +114,55 @@ export const backendService = {
 
   // Products
   async createProduct(product: Product): Promise<void> {
-    await fetch("/api/products", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(product),
-    });
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      await offlineDb.addToQueue("create_product", product);
+      return;
+    }
+    try {
+      const res = await fetch("/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(product),
+      });
+      if (!res.ok) throw new Error("Server rejected product creation");
+    } catch (err) {
+      console.warn("Failed to create product online, queueing offline:", err);
+      await offlineDb.addToQueue("create_product", product);
+    }
   },
 
   async updateProduct(id: string, product: Product): Promise<void> {
-    await fetch(`/api/products/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(product),
-    });
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      await offlineDb.addToQueue("update_product", { id, ...product });
+      return;
+    }
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(product),
+      });
+      if (!res.ok) throw new Error("Server rejected product update");
+    } catch (err) {
+      console.warn("Failed to update product online, queueing offline:", err);
+      await offlineDb.addToQueue("update_product", { id, ...product });
+    }
   },
 
   async deleteProduct(id: string): Promise<void> {
-    await fetch(`/api/products/${id}`, {
-      method: "DELETE",
-    });
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      await offlineDb.addToQueue("delete_product", { id });
+      return;
+    }
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Server rejected product deletion");
+    } catch (err) {
+      console.warn("Failed to delete product online, queueing offline:", err);
+      await offlineDb.addToQueue("delete_product", { id });
+    }
   },
 
   // Customers
@@ -423,6 +453,23 @@ export const backendService = {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(item.payload),
+          });
+        } else if (item.type === "create_product") {
+          res = await fetch("/api/products", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(item.payload),
+          });
+        } else if (item.type === "update_product") {
+          const { id: productId, ...productData } = item.payload;
+          res = await fetch(`/api/products/${productId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(productData),
+          });
+        } else if (item.type === "delete_product") {
+          res = await fetch(`/api/products/${item.payload.id}`, {
+            method: "DELETE",
           });
         }
 

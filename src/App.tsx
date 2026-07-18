@@ -21,6 +21,10 @@ export default function App() {
   useEffect(() => {
     async function initDb() {
       try {
+        // Load data from IndexedDB first
+        await store.initStore();
+        
+        // Then sync from Supabase
         await backendService.syncFromBackend();
       } catch (err) {
         console.warn("Initial database sync failed, using offline local fallback:", err);
@@ -35,6 +39,31 @@ export default function App() {
       }
     }
     initDb();
+  }, []);
+
+  // Request browser persistent storage & listen for beforeunload if there's unsynced items
+  useEffect(() => {
+    if (typeof window !== "undefined" && navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().then((persistent) => {
+        if (persistent) {
+          console.log("Persistent storage granted. Chrome/Edge will not auto-delete cache.");
+        }
+      });
+    }
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const hasUnsynced = localStorage.getItem("has_unsynced_items") === "true";
+      if (hasUnsynced) {
+        e.preventDefault();
+        e.returnValue = "يوجد عمليات غير متزامنة! إغلاق الصفحة أو إعادة تحميلها قد يسبب فقدان البيانات المعلقة. هل أنت متأكد؟";
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
   }, []);
 
   // Listen to network status to trigger auto-sync

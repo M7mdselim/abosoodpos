@@ -201,6 +201,12 @@ export function AppNavbar() {
   if (!session) return null;
 
   const handleLogout = () => {
+    if (queueCount > 0) {
+      const confirmForce = window.confirm(
+        "⚠️ تنبيه هام: يوجد عمليات معلقة لم تتم مزامنتها مع الخادم بعد. إذا قمت بتسجيل الخروج الآن، قد تفقد هذه العمليات نهائياً. هل أنت متأكد من تسجيل الخروج؟"
+      );
+      if (!confirmForce) return;
+    }
     logout();
     router.navigate({ to: "/login" });
   };

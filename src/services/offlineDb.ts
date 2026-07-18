@@ -1,13 +1,13 @@
 export interface SyncItem {
   id: string;
-  type: "create_sale" | "create_customer" | "update_customer" | "open_shift" | "close_shift" | "void_sale" | "update_payment" | "create_log";
+  type: "create_sale" | "create_customer" | "update_customer" | "open_shift" | "close_shift" | "void_sale" | "update_payment" | "create_log" | "create_product" | "update_product" | "delete_product";
   payload: any;
   createdAt: string;
 }
 
 class OfflineDb {
   private dbName = "abosood_offline_db";
-  private dbVersion = 1;
+  private dbVersion = 2; // Bumped to version 2 to support customers, products, and sales tables
 
   private getDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
@@ -22,6 +22,15 @@ class OfflineDb {
         const db = request.result;
         if (!db.objectStoreNames.contains("sync_queue")) {
           db.createObjectStore("sync_queue", { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains("customers")) {
+          db.createObjectStore("customers", { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains("products")) {
+          db.createObjectStore("products", { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains("sales")) {
+          db.createObjectStore("sales", { keyPath: "id" });
         }
       };
     });
@@ -40,8 +49,14 @@ class OfflineDb {
           createdAt: new Date().toISOString(),
         };
         const request = store.put(item);
-        request.onsuccess = () => {
+        request.onsuccess = async () => {
           if (typeof window !== "undefined") {
+            try {
+              const queue = await this.getQueue();
+              localStorage.setItem("has_unsynced_items", queue.length > 0 ? "true" : "false");
+            } catch (e) {
+              console.error(e);
+            }
             window.dispatchEvent(new Event("offline_queue_changed"));
           }
           resolve();
@@ -81,8 +96,14 @@ class OfflineDb {
         const tx = db.transaction("sync_queue", "readwrite");
         const store = tx.objectStore("sync_queue");
         const request = store.delete(id);
-        request.onsuccess = () => {
+        request.onsuccess = async () => {
           if (typeof window !== "undefined") {
+            try {
+              const queue = await this.getQueue();
+              localStorage.setItem("has_unsynced_items", queue.length > 0 ? "true" : "false");
+            } catch (e) {
+              console.error(e);
+            }
             window.dispatchEvent(new Event("offline_queue_changed"));
           }
           resolve();
@@ -91,6 +112,55 @@ class OfflineDb {
       });
     } catch (err) {
       console.error("IndexedDB error removing from queue:", err);
+    }
+  }
+
+  async saveList(storeName: "customers" | "products" | "sales", list: any[]): Promise<void> {
+    try {
+      const db = await this.getDB();
+      return new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(storeName, "readwrite");
+        const store = tx.objectStore(storeName);
+        
+        const clearReq = store.clear();
+        clearReq.onerror = () => reject(clearReq.error);
+        
+        clearReq.onsuccess = () => {
+          if (list.length === 0) {
+            resolve();
+            return;
+          }
+          let count = 0;
+          list.forEach((item) => {
+            const putReq = store.put(item);
+            putReq.onerror = () => reject(putReq.error);
+            putReq.onsuccess = () => {
+              count++;
+              if (count === list.length) {
+                resolve();
+              }
+            };
+          });
+        };
+      });
+    } catch (err) {
+      console.error(`IndexedDB error saving list to ${storeName}:`, err);
+    }
+  }
+
+  async getList(storeName: "customers" | "products" | "sales"): Promise<any[]> {
+    try {
+      const db = await this.getDB();
+      return new Promise<any[]>((resolve, reject) => {
+        const tx = db.transaction(storeName, "readonly");
+        const store = tx.objectStore(storeName);
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+      });
+    } catch (err) {
+      console.error(`IndexedDB error getting list from ${storeName}:`, err);
+      return [];
     }
   }
 }
