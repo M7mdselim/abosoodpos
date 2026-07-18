@@ -98,14 +98,19 @@ function ReceiptsPage() {
   const sales = useMemo(() => {
     let list = saleService.list();
     
-    // Cashier filter: only see their own current/last shift receipts based on shiftDay
+    // Cashier filter: only see receipts of the active shift or their own last shift
     if (session?.role === "cashier") {
-      const cashierShifts = shiftService.getShifts().filter((sh) => sh.cashierId === session.id);
-      const currentOrLastShift = cashierShifts[0]; // Since shifts are sorted DESC
-      if (currentOrLastShift) {
-        list = list.filter((s) => s.cashierId === session.id && s.shiftDay === currentOrLastShift.shiftDay);
+      const activeShift = shiftService.getActiveShift();
+      if (activeShift) {
+        list = list.filter((s) => s.shiftDay === activeShift.shiftDay);
       } else {
-        list = list.filter((s) => s.cashierId === session.id);
+        const cashierShifts = shiftService.getShifts().filter((sh) => sh.cashierId === session.id);
+        const currentOrLastShift = cashierShifts[0]; // Since shifts are sorted DESC
+        if (currentOrLastShift) {
+          list = list.filter((s) => s.cashierId === session.id && s.shiftDay === currentOrLastShift.shiftDay);
+        } else {
+          list = list.filter((s) => s.cashierId === session.id);
+        }
       }
     }
 

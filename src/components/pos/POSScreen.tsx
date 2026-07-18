@@ -167,9 +167,7 @@ export function POSScreen() {
 
   const draftSale = useMemo(() => {
     if (items.length === 0) return null;
-    const cashierShift = shiftService.getShifts().find(
-      (s) => s.status === "open" && s.cashierId === (session?.id || "u_cashier")
-    );
+    const cashierShift = shiftService.getActiveShift();
     const getLocalDayStr = () => {
       const d = new Date();
       const year = d.getFullYear();

@@ -152,8 +152,7 @@ export function AppNavbar() {
   useEffect(() => {
     const updateShiftDay = () => {
       if (!session) return;
-      const cashierShifts = shiftService.getShifts().filter((sh) => sh.cashierId === session.id);
-      const activeShift = cashierShifts.find((s) => s.status === "open");
+      const activeShift = shiftService.getActiveShift();
       if (activeShift) {
         setShiftDay(activeShift.shiftDay);
       } else {

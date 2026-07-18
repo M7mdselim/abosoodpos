@@ -28,9 +28,7 @@ export const saleService = {
   },
   create: (sale: Omit<Sale, "id" | "invoiceNumber" | "date" | "status">): Sale => {
     const nextNum = 100000 + store.sales.length + 1;
-    const activeShift = shiftService.getShifts().find(
-      (s) => s.status === "open" && s.cashierId === sale.cashierId
-    );
+    const activeShift = shiftService.getActiveShift();
     
     // Get local YYYY-MM-DD string instead of UTC toISOString
     const getLocalDayStr = () => {
