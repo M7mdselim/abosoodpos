@@ -162,9 +162,22 @@ function ShiftsPage() {
       title={t("shifts")}
       subtitle="إدارة وتتبع ورديات الصندوق النقدي والدرج"
       actions={
-        <Button variant="outline" size="sm" onClick={forceRefresh}>
-          <RefreshCw className="mr-2 h-4 w-4" /> تحديث البيانات
-        </Button>
+        <div className="flex gap-2">
+          {activeShift && hasPrintSpotPermission && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5 font-bold border-amber-600/30 text-amber-700 hover:bg-amber-600/10 hover:text-amber-800"
+              onClick={() => setPrintShift(activeShift)}
+            >
+              <Printer className="h-4 w-4" /> طباعة جرد الوردية الحالية
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={forceRefresh}>
+            <RefreshCw className="mr-2 h-4 w-4" /> تحديث البيانات
+          </Button>
+        </div>
       }
     >
       <div className="grid gap-6 md:grid-cols-3">
@@ -243,10 +256,21 @@ function ShiftsPage() {
             )
           ) : !canManageActiveShift ? (
             <Card className="border-destructive/20 bg-destructive/5 animate-in fade-in duration-200">
-              <CardHeader>
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:space-y-0 pb-4">
                 <CardTitle className="text-destructive flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5" /> وردية نشطة لمستخدم آخر
                 </CardTitle>
+                {hasPrintSpotPermission && (
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-1.5 font-bold border-destructive/20 text-destructive hover:bg-destructive/10"
+                    onClick={() => setPrintShift(activeShift)}
+                  >
+                    <Printer className="h-4 w-4" /> طباعة الجرد (Spot Check)
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-destructive/85 font-semibold leading-relaxed">
