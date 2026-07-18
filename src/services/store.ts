@@ -45,10 +45,32 @@ const DEFAULT_SETTINGS: AppSettings = {
   stockAlertsEnabled: true,
 };
 
+const obfuscateText = (text: string): string => {
+  try {
+    return btoa(unescape(encodeURIComponent(text)));
+  } catch {
+    return text;
+  }
+};
+
+const deobfuscateText = (text: string): string => {
+  try {
+    return decodeURIComponent(escape(atob(text)));
+  } catch {
+    return text;
+  }
+};
+
 const getLocal = <T>(key: string, fallback: T): T => {
   if (typeof window === "undefined") return fallback;
-  const data = localStorage.getItem(key);
+  let data = localStorage.getItem(key);
   if (!data) return fallback;
+  
+  // Deobfuscate pos_users if it's currently encoded (does not start with plain JSON bracket)
+  if (key === "pos_users" && !data.startsWith("[")) {
+    data = deobfuscateText(data);
+  }
+  
   try {
     return JSON.parse(data) as T;
   } catch {
@@ -58,7 +80,11 @@ const getLocal = <T>(key: string, fallback: T): T => {
 
 const setLocal = <T>(key: string, val: T): void => {
   if (typeof window !== "undefined") {
-    localStorage.setItem(key, JSON.stringify(val));
+    let dataStr = JSON.stringify(val);
+    if (key === "pos_users") {
+      dataStr = obfuscateText(dataStr);
+    }
+    localStorage.setItem(key, dataStr);
   }
 };
 
@@ -86,6 +112,12 @@ let _users = getLocal<User[]>("pos_users", []).map((u) => {
       : undefined
   };
 });
+
+// Instantly obfuscate pos_users in local storage if it was loaded as plain text
+if (typeof window !== "undefined" && localStorage.getItem("pos_users")?.startsWith("[")) {
+  setLocal("pos_users", _users);
+}
+
 let _settings = getLocal<AppSettings>("pos_settings", DEFAULT_SETTINGS);
 
 const DEFAULT_CATEGORIES: string[] = [];
