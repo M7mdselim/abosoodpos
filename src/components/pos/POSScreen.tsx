@@ -318,7 +318,7 @@ export function POSScreen() {
     const km = typeof currentKm === "number" ? currentKm : activeCar.currentKm;
     const oilItem = items.find((i) => {
       const p = productService.get(i.productId);
-      return p?.category === "Engine Oil" || p?.category === "زيوت محركات";
+      return p?.oilMileage !== undefined || p?.category === "Engine Oil" || p?.category === "زيوت محركات";
     });
     const oilProduct = oilItem ? productService.get(oilItem.productId) : null;
     const oilMileage = oilProduct?.oilMileage;
@@ -1368,112 +1368,232 @@ function ReceiptDialog({
             }
           `}</style>
 
-          {/* Header */}
-          <div className="text-center mb-1">
-            {settings.logoUrl && (
-              <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white" />
-            )}
-            <div className="text-sm font-black text-black">{settings.companyNameAr}</div>
-            <div className="text-[10px] mt-0.5 font-semibold text-black">{settings.sloganAr}</div>
-            <div className="text-[9px] mt-1 text-black font-medium">
-              {settings.phone && `ت: ${settings.phone}`}
-              {settings.phone && settings.address && " | "}
-              {settings.address && `${settings.address}`}
+          {/* Copy 1: Shop Copy */}
+          <div className="receipt-single-copy">
+            {/* Header */}
+            <div className="text-center mb-1">
+              {settings.logoUrl && (
+                <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white" />
+              )}
+              <div className="text-sm font-black text-black">{settings.companyNameAr}</div>
+              <div className="text-[10px] mt-0.5 font-semibold text-black">{settings.sloganAr}</div>
+              <div className="text-[9px] mt-1 text-black font-medium">
+                {settings.phone && `ت: ${settings.phone}`}
+                {settings.phone && settings.address && " | "}
+                {settings.address && `${settings.address}`}
+              </div>
             </div>
-          </div>
-          
-          <div className="my-2 border-t-2 border-dashed border-black" />
-          
-          {/* Metadata */}
-          <div className="grid grid-cols-2 gap-y-1 text-[10px] text-black">
-            <div><b>رقم الفاتورة:</b></div>
-            <div className="text-left font-bold">#{sale.invoiceNumber.replace("INV-", "")}</div>
-            <div><b>التاريخ والوقت:</b></div>
-            <div className="text-left">
-              {new Date(sale.date).toLocaleDateString("ar-EG")} {new Date(sale.date).toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
+            
+            <div className="my-2 border-t-2 border-dashed border-black" />
+            
+            {/* Metadata */}
+            <div className="grid grid-cols-2 gap-y-1 text-[10px] text-black">
+              <div><b>رقم الفاتورة:</b></div>
+              <div className="text-left font-bold">#{sale.invoiceNumber.replace("INV-", "")}</div>
+              <div><b>التاريخ والوقت:</b></div>
+              <div className="text-left">
+                {new Date(sale.date).toLocaleDateString("ar-EG")} {new Date(sale.date).toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
+              </div>
+              <div><b>أمين الصندوق:</b></div>
+              <div className="text-left">{sale.cashierName}</div>
             </div>
-            <div><b>أمين الصندوق:</b></div>
-            <div className="text-left">{sale.cashierName}</div>
-          </div>
-          
-          <div className="my-2 border-t border-dashed border-black" />
-          
-          {/* Customer */}
-          <div className="text-[10px] text-right leading-tight space-y-0.5 bg-black/[0.01] p-1.5 border border-dashed border-black rounded">
-            <div><b>العميل:</b> {sale.customerName}</div>
-            <div><b>الهاتف:</b> {sale.customerPhone}</div>
-            <div><b>السيارة:</b> {sale.carBrand} {sale.carModel} — {sale.km.toLocaleString()} كم</div>
-          </div>
-          
-          <div className="my-2 border-t border-dashed border-black" />
-          
-          {/* Product Items Table */}
-          <table className="w-full text-[10px] text-black border-collapse">
-            <thead>
-              <tr className="border-b border-black text-right font-bold">
-                <th className="py-1 text-right w-[45%]">البند</th>
-                <th className="py-1 text-center w-[15%]">الكمية</th>
-                <th className="py-1 text-left w-[20%] font-bold">السعر</th>
-                <th className="py-1 text-left w-[20%] font-bold">الإجمالي</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sale.items.map((it) => (
-                <tr key={it.productId} className="border-b border-dashed border-black/20">
-                  <td className="py-1 text-right">{it.name}</td>
-                  <td className="py-1 text-center">{it.quantity}</td>
-                  <td className="py-1 text-left">{it.unitPrice.toFixed(0)}</td>
-                  <td className="py-1 text-left font-bold">{(it.quantity * it.unitPrice).toFixed(0)}</td>
+            
+            <div className="my-2 border-t border-dashed border-black" />
+            
+            {/* Customer */}
+            <div className="text-[10px] text-right leading-tight space-y-0.5 bg-black/[0.01] p-1.5 border border-dashed border-black rounded">
+              <div><b>العميل:</b> {sale.customerName}</div>
+              <div><b>الهاتف:</b> {sale.customerPhone}</div>
+              <div><b>السيارة:</b> {sale.carBrand} {sale.carModel} — {sale.km.toLocaleString()} كم</div>
+            </div>
+            
+            <div className="my-2 border-t border-dashed border-black" />
+            
+            {/* Product Items Table */}
+            <table className="w-full text-[10px] text-black border-collapse">
+              <thead>
+                <tr className="border-b border-black text-right font-bold">
+                  <th className="py-1 text-right w-[45%]">البند</th>
+                  <th className="py-1 text-center w-[15%]">الكمية</th>
+                  <th className="py-1 text-left w-[20%] font-bold">السعر</th>
+                  <th className="py-1 text-left w-[20%] font-bold">الإجمالي</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          
-          <div className="my-2 border-t border-dashed border-black" />
-          
-          {/* Totals */}
-          <div className="space-y-1 text-[10px] text-black">
-            <Row label="الإجمالي الفرعي" value={`${sale.subtotal.toFixed(0)} ج.م`} />
-            {sale.discount > 0 && <Row label="الخصم" value={`-${sale.discount.toFixed(0)} ج.م`} />}
-            {sale.vat > 0 && <Row label="الضريبة (14%)" value={`${sale.vat.toFixed(0)} ج.م`} />}
-            <div className="flex justify-between border-y-2 border-black py-1 text-xs font-extrabold my-1 text-black">
-              <span>الإجمالي الكلي</span>
-              <span>{sale.total.toFixed(0)} ج.م</span>
-            </div>
-            <Row
-              label="طريقة الدفع"
-              value={
-                sale.paymentMethod === "Mixed"
-                  ? "مختلط"
-                  : sale.paymentMethod === "Cash"
-                  ? "نقدي"
-                  : "كارت"
-              }
-            />
-            {sale.paymentMethod === "Mixed" && (
-              <div className="text-[9px] text-muted-foreground flex justify-between pr-2 border-r border-dashed border-black/40">
-                <span>نقدي: {sale.cashAmount?.toFixed(0)} ج.م</span>
-                <span>كارت: {sale.cardAmount?.toFixed(0)} ج.م</span>
+              </thead>
+              <tbody>
+                {sale.items.map((it) => (
+                  <tr key={it.productId} className="border-b border-dashed border-black/20">
+                    <td className="py-1 text-right">{it.name}</td>
+                    <td className="py-1 text-center">{it.quantity}</td>
+                    <td className="py-1 text-left">{it.unitPrice.toFixed(0)}</td>
+                    <td className="py-1 text-left font-bold">{(it.quantity * it.unitPrice).toFixed(0)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            
+            <div className="my-2 border-t border-dashed border-black" />
+            
+            {/* Totals */}
+            <div className="space-y-1 text-[10px] text-black">
+              <Row label="الإجمالي الفرعي" value={`${sale.subtotal.toFixed(0)} ج.م`} />
+              {sale.discount > 0 && <Row label="الخصم" value={`-${sale.discount.toFixed(0)} ج.م`} />}
+              {sale.vat > 0 && <Row label="الضريبة (14%)" value={`${sale.vat.toFixed(0)} ج.م`} />}
+              <div className="flex justify-between border-y-2 border-black py-1 text-xs font-extrabold my-1 text-black">
+                <span>الإجمالي الكلي</span>
+                <span>{sale.total.toFixed(0)} ج.م</span>
               </div>
-            )}
-          </div>
-          
-          {/* Conditional Next Recommended Change Calculation */}
-          {sale.oilUsed && sale.oilMileage && (
-            <>
-              <div className="my-2 border-t border-dashed border-black" />
-              <div className="border border-black p-2 rounded text-center text-[10px] bg-black/[0.01]">
-                <div className="font-bold text-black">تغيير الزيت القادم الموصى به ({sale.oilMileage.toLocaleString()} كم)</div>
-                <div className="mt-1 text-base font-extrabold text-black tracking-wide">
-                  {(sale.km + sale.oilMileage).toLocaleString()} كم
+              <Row
+                label="طريقة الدفع"
+                value={
+                  sale.paymentMethod === "Mixed"
+                    ? "مختلط"
+                    : sale.paymentMethod === "Cash"
+                    ? "نقدي"
+                    : "كارت"
+                }
+              />
+              {sale.paymentMethod === "Mixed" && (
+                <div className="text-[9px] text-muted-foreground flex justify-between pr-2 border-r border-dashed border-black/40">
+                  <span>نقدي: {sale.cashAmount?.toFixed(0)} ج.م</span>
+                  <span>كارت: {sale.cardAmount?.toFixed(0)} ج.م</span>
                 </div>
+              )}
+            </div>
+            
+            {/* Conditional Next Recommended Change Calculation */}
+            {sale.oilUsed && sale.oilMileage && (
+              <>
+                <div className="my-2 border-t border-dashed border-black" />
+                <div className="border border-black p-2 rounded text-center text-[10px] bg-black/[0.01]">
+                  <div className="font-bold text-black">تغيير الزيت القادم الموصى به ({sale.oilMileage.toLocaleString()} كم)</div>
+                  <div className="mt-1 text-base font-extrabold text-black tracking-wide">
+                    {(sale.km + sale.oilMileage).toLocaleString()} كم
+                  </div>
+                </div>
+              </>
+            )}
+            
+            <div className="my-2 border-t border-dashed border-black" />
+            <div className="text-center text-[10px] text-black font-bold whitespace-pre-line">
+              {settings.receiptFooter || "شكراً لزيارتكم — رافقتكم السلامة!"}
+            </div>
+          </div>
+
+          {/* Page Break & Divider for Second Copy */}
+          <div 
+            className="my-6 border-t-2 border-dashed border-black" 
+            style={{ pageBreakBefore: "always", breakBefore: "page" }} 
+          />
+
+          {/* Copy 2: Customer Copy */}
+          <div className="receipt-single-copy">
+            {/* Header */}
+            <div className="text-center mb-1">
+              {settings.logoUrl && (
+                <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white" />
+              )}
+              <div className="text-sm font-black text-black">{settings.companyNameAr}</div>
+              <div className="text-[10px] mt-0.5 font-semibold text-black">{settings.sloganAr}</div>
+              <div className="text-[9px] mt-1 text-black font-medium">
+                {settings.phone && `ت: ${settings.phone}`}
+                {settings.phone && settings.address && " | "}
+                {settings.address && `${settings.address}`}
               </div>
-            </>
-          )}
-          
-          <div className="my-2 border-t border-dashed border-black" />
-          <div className="text-center text-[10px] text-black font-bold whitespace-pre-line">
-            {settings.receiptFooter || "شكراً لزيارتكم — رافقتكم السلامة!"}
+            </div>
+            
+            <div className="my-2 border-t-2 border-dashed border-black" />
+            
+            {/* Metadata */}
+            <div className="grid grid-cols-2 gap-y-1 text-[10px] text-black">
+              <div><b>رقم الفاتورة:</b></div>
+              <div className="text-left font-bold">#{sale.invoiceNumber.replace("INV-", "")}</div>
+              <div><b>التاريخ والوقت:</b></div>
+              <div className="text-left">
+                {new Date(sale.date).toLocaleDateString("ar-EG")} {new Date(sale.date).toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
+              </div>
+              <div><b>أمين الصندوق:</b></div>
+              <div className="text-left">{sale.cashierName}</div>
+            </div>
+            
+            <div className="my-2 border-t border-dashed border-black" />
+            
+            {/* Customer */}
+            <div className="text-[10px] text-right leading-tight space-y-0.5 bg-black/[0.01] p-1.5 border border-dashed border-black rounded">
+              <div><b>العميل:</b> {sale.customerName}</div>
+              <div><b>الهاتف:</b> {sale.customerPhone}</div>
+              <div><b>السيارة:</b> {sale.carBrand} {sale.carModel} — {sale.km.toLocaleString()} كم</div>
+            </div>
+            
+            <div className="my-2 border-t border-dashed border-black" />
+            
+            {/* Product Items Table */}
+            <table className="w-full text-[10px] text-black border-collapse">
+              <thead>
+                <tr className="border-b border-black text-right font-bold">
+                  <th className="py-1 text-right w-[45%]">البند</th>
+                  <th className="py-1 text-center w-[15%]">الكمية</th>
+                  <th className="py-1 text-left w-[20%] font-bold">السعر</th>
+                  <th className="py-1 text-left w-[20%] font-bold">الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sale.items.map((it) => (
+                  <tr key={it.productId} className="border-b border-dashed border-black/20">
+                    <td className="py-1 text-right">{it.name}</td>
+                    <td className="py-1 text-center">{it.quantity}</td>
+                    <td className="py-1 text-left">{it.unitPrice.toFixed(0)}</td>
+                    <td className="py-1 text-left font-bold">{(it.quantity * it.unitPrice).toFixed(0)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            
+            <div className="my-2 border-t border-dashed border-black" />
+            
+            {/* Totals */}
+            <div className="space-y-1 text-[10px] text-black">
+              <Row label="الإجمالي الفرعي" value={`${sale.subtotal.toFixed(0)} ج.م`} />
+              {sale.discount > 0 && <Row label="الخصم" value={`-${sale.discount.toFixed(0)} ج.م`} />}
+              {sale.vat > 0 && <Row label="الضريبة (14%)" value={`${sale.vat.toFixed(0)} ج.م`} />}
+              <div className="flex justify-between border-y-2 border-black py-1 text-xs font-extrabold my-1 text-black">
+                <span>الإجمالي الكلي</span>
+                <span>{sale.total.toFixed(0)} ج.م</span>
+              </div>
+              <Row
+                label="طريقة الدفع"
+                value={
+                  sale.paymentMethod === "Mixed"
+                    ? "مختلط"
+                    : sale.paymentMethod === "Cash"
+                    ? "نقدي"
+                    : "كارت"
+                }
+              />
+              {sale.paymentMethod === "Mixed" && (
+                <div className="text-[9px] text-muted-foreground flex justify-between pr-2 border-r border-dashed border-black/40">
+                  <span>نقدي: {sale.cashAmount?.toFixed(0)} ج.م</span>
+                  <span>كارت: {sale.cardAmount?.toFixed(0)} ج.م</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Conditional Next Recommended Change Calculation */}
+            {sale.oilUsed && sale.oilMileage && (
+              <>
+                <div className="my-2 border-t border-dashed border-black" />
+                <div className="border border-black p-2 rounded text-center text-[10px] bg-black/[0.01]">
+                  <div className="font-bold text-black">تغيير الزيت القادم الموصى به ({sale.oilMileage.toLocaleString()} كم)</div>
+                  <div className="mt-1 text-base font-extrabold text-black tracking-wide">
+                    {(sale.km + sale.oilMileage).toLocaleString()} كم
+                  </div>
+                </div>
+              </>
+            )}
+            
+            <div className="my-2 border-t border-dashed border-black" />
+            <div className="text-center text-[10px] text-black font-bold whitespace-pre-line">
+              {settings.receiptFooter || "شكراً لزيارتكم — رافقتكم السلامة!"}
+            </div>
           </div>
         </div>,
         document.body

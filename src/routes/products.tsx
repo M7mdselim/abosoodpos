@@ -218,7 +218,7 @@ function ProductsPage() {
                 <TableCell>
                   <div className="flex items-center gap-1.5">
                     <span>{p.category}</span>
-                    {(p.category === "Engine Oil" || p.category === "زيوت محركات") && p.oilMileage && (
+                    {p.oilMileage && (
                       <span className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded font-extrabold uppercase">
                         {p.oilMileage.toLocaleString()} KM
                       </span>
@@ -342,11 +342,7 @@ function ProductDialog({
       toast.error("يرجى ملء اسم المنتج والماركة");
       return;
     }
-    // Clean up mileage if not oil product
     const cleanForm = { ...form };
-    if (cleanForm.category !== "Engine Oil" && cleanForm.category !== "زيوت محركات") {
-      delete cleanForm.oilMileage;
-    }
     if (cleanForm.isUnlimited) {
       cleanForm.stock = 0;
     }
@@ -383,7 +379,6 @@ function ProductDialog({
                   setForm({
                     ...form,
                     category: cat,
-                    oilMileage: (cat === "Engine Oil" || cat === "زيوت محركات") ? 5000 : undefined,
                   });
                 }}
               >
@@ -403,24 +398,22 @@ function ProductDialog({
             </div>
           </div>
 
-          {(form.category === "Engine Oil" || form.category === "زيوت محركات") && (
-            <div>
-              <Label>صلاحية الزيت (المسافة بالكم)</Label>
-              <Select
-                value={form.oilMileage ? String(form.oilMileage) : "none"}
-                onValueChange={(v) =>
-                  setForm({ ...form, oilMileage: v === "none" ? undefined : Number(v) })
-                }
-              >
-                <SelectTrigger><SelectValue placeholder="اختر صلاحية الزيت..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">غير محدد (يستخدم الحساب الافتراضي)</SelectItem>
-                  <SelectItem value="5000">5,000 كم</SelectItem>
-                  <SelectItem value="10000">10,000 كم</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div>
+            <Label>صلاحية الزيت (المسافة بالكم)</Label>
+            <Select
+              value={form.oilMileage ? String(form.oilMileage) : "none"}
+              onValueChange={(v) =>
+                setForm({ ...form, oilMileage: v === "none" ? undefined : Number(v) })
+              }
+            >
+              <SelectTrigger><SelectValue placeholder="اختر صلاحية الزيت..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">غير محدد (بدون صلاحية)</SelectItem>
+                <SelectItem value="5000">5,000 كم</SelectItem>
+                <SelectItem value="10000">10,000 كم</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <div>
             <Label>الباركود</Label>
