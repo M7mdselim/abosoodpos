@@ -95,4 +95,8 @@ export const customerService = {
     }
     return newCar;
   },
+  remove: (id: string) => {
+    store.customers = store.customers.filter((c) => c.id !== id);
+    backendService.deleteCustomer(id).catch((err) => console.error("Error deleting customer from backend:", err));
+  },
 };

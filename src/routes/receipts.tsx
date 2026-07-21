@@ -49,7 +49,17 @@ function ReceiptsPage() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "voided">("all");
   const isCashier = session?.role === "cashier";
-  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "2days" | "7days" | "30days" | "all">(isCashier ? "all" : "2days");
+  const getDefaultShiftDay = () => {
+    const activeShift = shiftService.getActiveShift();
+    if (activeShift?.shiftDay) return activeShift.shiftDay;
+    const allShifts = shiftService.getShifts();
+    if (allShifts.length > 0 && allShifts[0].shiftDay) return allShifts[0].shiftDay;
+    return new Date().toISOString().split("T")[0];
+  };
+
+  const defaultShiftDay = useMemo(() => getDefaultShiftDay(), []);
+  const [startDate, setStartDate] = useState<string>(defaultShiftDay);
+  const [endDate, setEndDate] = useState<string>(defaultShiftDay);
   const [paymentFilter, setPaymentFilter] = useState<"all" | "Cash" | "Card" | "Mixed">("all");
   const [cashierFilter, setCashierFilter] = useState<string>("all");
   const [carBrandFilter, setCarBrandFilter] = useState<string>("all");
@@ -126,35 +136,11 @@ function ReceiptsPage() {
     }
 
     // Date range filter (using shiftDay operational business date)
-    const getShiftDayString = (offsetDays = 0) => {
-      const d = new Date();
-      d.setDate(d.getDate() - offsetDays);
-      return d.toISOString().split("T")[0];
-    };
-
-    const todayStr = getShiftDayString(0);
-    const yesterdayStr = getShiftDayString(1);
-    const sevenDaysAgoStr = getShiftDayString(6);
-    const thirtyDaysAgoStr = getShiftDayString(29);
-
     list = list.filter((s) => {
       if (!s.shiftDay) return true;
-      if (dateFilter === "today") {
-        return s.shiftDay === todayStr;
-      }
-      if (dateFilter === "yesterday") {
-        return s.shiftDay === yesterdayStr;
-      }
-      if (dateFilter === "2days") {
-        return s.shiftDay === todayStr || s.shiftDay === yesterdayStr;
-      }
-      if (dateFilter === "7days") {
-        return s.shiftDay >= sevenDaysAgoStr;
-      }
-      if (dateFilter === "30days") {
-        return s.shiftDay >= thirtyDaysAgoStr;
-      }
-      return true; // "all"
+      if (startDate && s.shiftDay < startDate) return false;
+      if (endDate && s.shiftDay > endDate) return false;
+      return true;
     });
 
     // Status filter
@@ -181,12 +167,12 @@ function ReceiptsPage() {
     }
 
     return list;
-  }, [query, statusFilter, dateFilter, paymentFilter, cashierFilter, carBrandFilter, session, tick]);
+  }, [query, statusFilter, startDate, endDate, paymentFilter, cashierFilter, carBrandFilter, session, tick]);
 
   // Reset page when search or status filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [query, statusFilter, dateFilter, paymentFilter, cashierFilter, carBrandFilter]);
+  }, [query, statusFilter, startDate, endDate, paymentFilter, cashierFilter, carBrandFilter]);
 
   const totalPages = Math.ceil(sales.length / itemsPerPage) || 1;
   const paginatedSales = useMemo(() => {
@@ -225,30 +211,58 @@ function ReceiptsPage() {
             />
           </div>
 
-          {/* Second row: date filter + advanced toggle (hidden for cashiers) */}
+          {/* Second row: date range filter pickers + advanced toggle (hidden for cashiers) */}
           {!isCashier && (
-          <div className="flex gap-2">
-            {/* Date range filter */}
-            <div className="flex-1">
-              <Select
-                value={dateFilter}
-                onValueChange={(v) => setDateFilter(v as any)}
-              >
-                <SelectTrigger className="h-10 text-sm border-slate-200 dark:border-white/10 rounded-xl bg-card">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 shrink-0 text-[#5470ff]" />
-                    <SelectValue placeholder="التاريخ" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">الفواتير اليوم</SelectItem>
-                  <SelectItem value="yesterday">الفواتير أمس</SelectItem>
-                  <SelectItem value="2days">آخر يومين</SelectItem>
-                  <SelectItem value="7days">آخر 7 أيام</SelectItem>
-                  <SelectItem value="30days">آخر 30 يوم</SelectItem>
-                  <SelectItem value="all">كل الأوقات</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {/* Date range pickers */}
+            <div className="flex flex-1 flex-wrap items-center gap-1.5 min-w-[280px]">
+              <div className="flex items-center gap-1 text-xs font-bold text-slate-500 shrink-0">
+                <Calendar className="h-4 w-4 text-[#5470ff]" />
+                <span>من:</span>
+              </div>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="h-10 text-xs border-slate-200 dark:border-white/10 rounded-xl bg-card flex-1 font-semibold min-w-[125px]"
+              />
+              <div className="text-xs font-bold text-slate-500 shrink-0">إلى:</div>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="h-10 text-xs border-slate-200 dark:border-white/10 rounded-xl bg-card flex-1 font-semibold min-w-[125px]"
+              />
+              {(startDate !== defaultShiftDay || endDate !== defaultShiftDay) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setStartDate(defaultShiftDay);
+                    setEndDate(defaultShiftDay);
+                  }}
+                  className="h-10 text-xs font-bold px-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-card hover:bg-muted shrink-0"
+                  title="الوردية الحالية"
+                >
+                  يوم الوردية الحالية
+                </Button>
+              )}
+              {(startDate || endDate) && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setStartDate("");
+                    setEndDate("");
+                  }}
+                  className="h-10 text-xs font-bold px-2 text-muted-foreground hover:text-foreground shrink-0"
+                  title="عرض جميع التواريخ"
+                >
+                  عرض الكل
+                </Button>
+              )}
             </div>
 
             {/* Toggle Advanced Filters Button */}
@@ -978,275 +992,151 @@ export function ReceiptViewDialog({
             }
           `}</style>
 
-          {/* Copy 1 */}
-          <div className="receipt-single-copy">
-            {sale.status === "voided" && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white/80 pointer-events-none z-10">
-                <div className="border-4 border-destructive text-destructive font-black text-xl px-4 py-1.5 rotate-12 rounded uppercase tracking-widest">
-                  فاتورة ملغاة
-                </div>
-              </div>
-            )}
-            
-            {/* Header */}
-            <div className="text-center mb-1">
-              {settings.logoUrl && (
-                <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white" />
+          {Array.from({ length: settings.receiptCopies || 2 }).map((_, copyIdx) => (
+            <div key={copyIdx} className="receipt-single-copy">
+              {copyIdx > 0 && (
+                <div 
+                  className="my-6 border-t-2 border-dashed border-black" 
+                  style={{ pageBreakBefore: "always", breakBefore: "page" }} 
+                />
               )}
-              <div className="text-sm font-black text-black">{settings.companyNameAr}</div>
-              <div className="text-[10px] mt-0.5 font-semibold text-black">{settings.sloganAr}</div>
-              <div className="text-[9px] mt-1 text-black font-medium">
-                {settings.phone && `ت: ${settings.phone}`}
-                {settings.phone && settings.address && " | "}
-                {settings.address && `${settings.address}`}
-              </div>
-            </div>
-            
-            <div className="my-2 border-t-2 border-dashed border-black" />
-            
-            {/* Metadata */}
-            <div className="grid grid-cols-2 gap-y-1 text-[10px] text-black">
-              <div><b>رقم الفاتورة:</b></div>
-              <div className="text-left font-bold">#{sale.invoiceNumber.replace("INV-", "")}</div>
-              <div><b>التاريخ والوقت:</b></div>
-              <div className="text-left">
-                {new Date(sale.date).toLocaleDateString("ar-EG")} {new Date(sale.date).toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
-              </div>
-              <div><b>أمين الصندوق:</b></div>
-              <div className="text-left">{sale.cashierName}</div>
-            </div>
-            
-            <div className="my-2 border-t border-dashed border-black" />
-            
-            {/* Customer info */}
-            <div className="text-[10px] text-right leading-tight space-y-0.5 bg-black/[0.01] p-1.5 border border-dashed border-black rounded">
-              <div><b>العميل:</b> {sale.customerName}</div>
-              <div><b>الهاتف:</b> {sale.customerPhone}</div>
-              <div><b>السيارة:</b> {sale.carBrand} {sale.carModel} — {sale.km.toLocaleString()} كم</div>
-            </div>
-            
-            <div className="my-2 border-t border-dashed border-black" />
-            
-            {/* Table */}
-            <table className="w-full text-[10px] text-black border-collapse">
-              <thead>
-                <tr className="border-b border-black text-right font-bold">
-                  <th className="py-1 text-right w-[45%]">البند</th>
-                  <th className="py-1 text-center w-[15%]">الكمية</th>
-                  <th className="py-1 text-left w-[20%] font-bold">السعر</th>
-                  <th className="py-1 text-left w-[20%] font-bold">الإجمالي</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sale.items.map((it) => (
-                  <tr key={it.productId} className="border-b border-dashed border-black/20">
-                    <td className="py-1 text-right">{it.name}</td>
-                    <td className="py-1 text-center">{it.quantity}</td>
-                    <td className="py-1 text-left">{it.unitPrice.toFixed(0)}</td>
-                    <td className="py-1 text-left font-bold">{(it.quantity * it.unitPrice).toFixed(0)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            
-            <div className="my-2 border-t border-dashed border-black" />
-            
-            {/* Totals */}
-            <div className="space-y-1 text-[10px] text-black">
-              <div className="flex justify-between">
-                <span>الإجمالي الفرعي</span>
-                <span>{sale.subtotal.toFixed(0)} ج.م</span>
-              </div>
-              {sale.discount > 0 && (
-                <div className="flex justify-between text-destructive">
-                  <span>الخصم</span>
-                  <span>-{sale.discount.toFixed(0)} ج.م</span>
-                </div>
-              )}
-              {sale.vat > 0 && (
-                <div className="flex justify-between">
-                  <span>الضريبة (14%)</span>
-                  <span>{sale.vat.toFixed(0)} ج.م</span>
-                </div>
-              )}
-              <div className="flex justify-between border-y-2 border-black py-1 text-xs font-extrabold my-1 text-black">
-                <span>الإجمالي الكلي</span>
-                <span>{sale.total.toFixed(0)} ج.م</span>
-              </div>
-              <div className="flex justify-between">
-                <span>طريقة الدفع</span>
-                <span>
-                  {sale.paymentMethod === "Mixed"
-                    ? "مختلط"
-                    : sale.paymentMethod === "Cash"
-                    ? "نقدي"
-                    : "كارت"}
-                </span>
-              </div>
-              {sale.paymentMethod === "Mixed" && (
-                <div className="text-[9px] text-muted-foreground flex justify-between pr-2 border-r border-dashed border-black/40">
-                  <span>نقدي: {sale.cashAmount?.toFixed(0)} ج.م</span>
-                  <span>كارت: {sale.cardAmount?.toFixed(0)} ج.م</span>
-                </div>
-              )}
-            </div>
-            
-            {/* Next Change calculation conditional display */}
-            {sale.oilUsed && sale.oilMileage && (
-              <>
-                <div className="my-2 border-t border-dashed border-black" />
-                <div className="border border-black p-2 rounded text-center text-[10px] bg-black/[0.01]">
-                  <div className="font-bold text-black">تغيير الزيت القادم الموصى به ({sale.oilMileage.toLocaleString()} كم)</div>
-                  <div className="mt-1 text-base font-extrabold text-black tracking-wide">
-                    {(sale.km + sale.oilMileage).toLocaleString()} كم
+              {sale.status === "voided" && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/80 pointer-events-none z-10">
+                  <div className="border-4 border-destructive text-destructive font-black text-xl px-4 py-1.5 rotate-12 rounded uppercase tracking-widest">
+                    فاتورة ملغاة
                   </div>
                 </div>
-              </>
-            )}
+              )}
+              
+              {/* Copy Indicator Header Banner (Only on 2nd and subsequent copies) */}
+              {copyIdx >= 1 && (
+                <div className="text-center font-black text-xs border border-black rounded py-0.5 mb-1.5 tracking-widest uppercase bg-black/[0.02]">
+                  COPY
+                </div>
+              )}
 
-            <div className="my-2 border-t border-dashed border-black" />
-            <div className="text-center text-[10px] text-black font-bold whitespace-pre-line">
-              {settings.receiptFooter || "شكراً لزيارتكم — رافقتكم السلامة!"}
-            </div>
-          </div>
-
-          {/* Page Break & Divider for Second Copy */}
-          <div 
-            className="my-6 border-t-2 border-dashed border-black" 
-            style={{ pageBreakBefore: "always", breakBefore: "page" }} 
-          />
-
-          {/* Copy 2 */}
-          <div className="receipt-single-copy">
-            {sale.status === "voided" && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white/80 pointer-events-none z-10">
-                <div className="border-4 border-destructive text-destructive font-black text-xl px-4 py-1.5 rotate-12 rounded uppercase tracking-widest">
-                  فاتورة ملغاة
+              {/* Header */}
+              <div className="text-center mb-1">
+                {settings.logoUrl && (
+                  <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white" />
+                )}
+                <div className="text-sm font-black text-black">{settings.companyNameAr}</div>
+                <div className="text-[10px] mt-0.5 font-semibold text-black">{settings.sloganAr}</div>
+                <div className="text-[9px] mt-1 text-black font-medium">
+                  {settings.phone && `ت: ${settings.phone}`}
+                  {settings.phone && settings.address && " | "}
+                  {settings.address && `${settings.address}`}
                 </div>
               </div>
-            )}
-            
-            {/* Header */}
-            <div className="text-center mb-1">
-              {settings.logoUrl && (
-                <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white" />
-              )}
-              <div className="text-sm font-black text-black">{settings.companyNameAr}</div>
-              <div className="text-[10px] mt-0.5 font-semibold text-black">{settings.sloganAr}</div>
-              <div className="text-[9px] mt-1 text-black font-medium">
-                {settings.phone && `ت: ${settings.phone}`}
-                {settings.phone && settings.address && " | "}
-                {settings.address && `${settings.address}`}
+              
+              <div className="my-2 border-t-2 border-dashed border-black" />
+              
+              {/* Metadata */}
+              <div className="grid grid-cols-2 gap-y-1 text-[10px] text-black">
+                <div><b>رقم الفاتورة:</b></div>
+                <div className="text-left font-bold">#{sale.invoiceNumber.replace("INV-", "")}</div>
+                <div><b>التاريخ والوقت:</b></div>
+                <div className="text-left">
+                  {new Date(sale.date).toLocaleDateString("ar-EG")} {new Date(sale.date).toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
+                </div>
+                <div><b>أمين الصندوق:</b></div>
+                <div className="text-left">{sale.cashierName}</div>
               </div>
-            </div>
-            
-            <div className="my-2 border-t-2 border-dashed border-black" />
-            
-            {/* Metadata */}
-            <div className="grid grid-cols-2 gap-y-1 text-[10px] text-black">
-              <div><b>رقم الفاتورة:</b></div>
-              <div className="text-left font-bold">#{sale.invoiceNumber.replace("INV-", "")}</div>
-              <div><b>التاريخ والوقت:</b></div>
-              <div className="text-left">
-                {new Date(sale.date).toLocaleDateString("ar-EG")} {new Date(sale.date).toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
+              
+              <div className="my-2 border-t border-dashed border-black" />
+              
+              {/* Customer info */}
+              <div className="text-[10px] text-right leading-tight space-y-0.5 bg-black/[0.01] p-1.5 border border-dashed border-black rounded">
+                <div><b>العميل:</b> {sale.customerName}</div>
+                <div><b>الهاتف:</b> {sale.customerPhone}</div>
+                <div><b>السيارة:</b> {sale.carBrand} {sale.carModel} — {sale.km.toLocaleString()} كم</div>
               </div>
-              <div><b>أمين الصندوق:</b></div>
-              <div className="text-left">{sale.cashierName}</div>
-            </div>
-            
-            <div className="my-2 border-t border-dashed border-black" />
-            
-            {/* Customer info */}
-            <div className="text-[10px] text-right leading-tight space-y-0.5 bg-black/[0.01] p-1.5 border border-dashed border-black rounded">
-              <div><b>العميل:</b> {sale.customerName}</div>
-              <div><b>الهاتف:</b> {sale.customerPhone}</div>
-              <div><b>السيارة:</b> {sale.carBrand} {sale.carModel} — {sale.km.toLocaleString()} كم</div>
-            </div>
-            
-            <div className="my-2 border-t border-dashed border-black" />
-            
-            {/* Table */}
-            <table className="w-full text-[10px] text-black border-collapse">
-              <thead>
-                <tr className="border-b border-black text-right font-bold">
-                  <th className="py-1 text-right w-[45%]">البند</th>
-                  <th className="py-1 text-center w-[15%]">الكمية</th>
-                  <th className="py-1 text-left w-[20%] font-bold">السعر</th>
-                  <th className="py-1 text-left w-[20%] font-bold">الإجمالي</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sale.items.map((it) => (
-                  <tr key={it.productId} className="border-b border-dashed border-black/20">
-                    <td className="py-1 text-right">{it.name}</td>
-                    <td className="py-1 text-center">{it.quantity}</td>
-                    <td className="py-1 text-left">{it.unitPrice.toFixed(0)}</td>
-                    <td className="py-1 text-left font-bold">{(it.quantity * it.unitPrice).toFixed(0)}</td>
+              
+              <div className="my-2 border-t border-dashed border-black" />
+              
+              {/* Table */}
+              <table className="w-full text-[10px] text-black border-collapse">
+                <thead>
+                  <tr className="border-b border-black text-right font-bold">
+                    <th className="py-1 text-right w-[45%]">البند</th>
+                    <th className="py-1 text-center w-[15%]">الكمية</th>
+                    <th className="py-1 text-left w-[20%] font-bold">السعر</th>
+                    <th className="py-1 text-left w-[20%] font-bold">الإجمالي</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            
-            <div className="my-2 border-t border-dashed border-black" />
-            
-            {/* Totals */}
-            <div className="space-y-1 text-[10px] text-black">
-              <div className="flex justify-between">
-                <span>الإجمالي الفرعي</span>
-                <span>{sale.subtotal.toFixed(0)} ج.م</span>
-              </div>
-              {sale.discount > 0 && (
-                <div className="flex justify-between text-destructive">
-                  <span>الخصم</span>
-                  <span>-{sale.discount.toFixed(0)} ج.م</span>
-                </div>
-              )}
-              {sale.vat > 0 && (
+                </thead>
+                <tbody>
+                  {sale.items.map((it) => (
+                    <tr key={it.productId} className="border-b border-dashed border-black/20">
+                      <td className="py-1 text-right">{it.name}</td>
+                      <td className="py-1 text-center">{it.quantity}</td>
+                      <td className="py-1 text-left">{it.unitPrice.toFixed(0)}</td>
+                      <td className="py-1 text-left font-bold">{(it.quantity * it.unitPrice).toFixed(0)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              
+              <div className="my-2 border-t border-dashed border-black" />
+              
+              {/* Totals */}
+              <div className="space-y-1 text-[10px] text-black">
                 <div className="flex justify-between">
-                  <span>الضريبة (14%)</span>
-                  <span>{sale.vat.toFixed(0)} ج.م</span>
+                  <span>الإجمالي الفرعي</span>
+                  <span>{sale.subtotal.toFixed(0)} ج.م</span>
                 </div>
-              )}
-              <div className="flex justify-between border-y-2 border-black py-1 text-xs font-extrabold my-1 text-black">
-                <span>الإجمالي الكلي</span>
-                <span>{sale.total.toFixed(0)} ج.م</span>
-              </div>
-              <div className="flex justify-between">
-                <span>طريقة الدفع</span>
-                <span>
-                  {sale.paymentMethod === "Mixed"
-                    ? "مختلط"
-                    : sale.paymentMethod === "Cash"
-                    ? "نقدي"
-                    : "كارت"}
-                </span>
-              </div>
-              {sale.paymentMethod === "Mixed" && (
-                <div className="text-[9px] text-muted-foreground flex justify-between pr-2 border-r border-dashed border-black/40">
-                  <span>نقدي: {sale.cashAmount?.toFixed(0)} ج.م</span>
-                  <span>كارت: {sale.cardAmount?.toFixed(0)} ج.م</span>
-                </div>
-              )}
-            </div>
-            
-            {/* Next Change calculation conditional display */}
-            {sale.oilUsed && sale.oilMileage && (
-              <>
-                <div className="my-2 border-t border-dashed border-black" />
-                <div className="border border-black p-2 rounded text-center text-[10px] bg-black/[0.01]">
-                  <div className="font-bold text-black">تغيير الزيت القادم الموصى به ({sale.oilMileage.toLocaleString()} كم)</div>
-                  <div className="mt-1 text-base font-extrabold text-black tracking-wide">
-                    {(sale.km + sale.oilMileage).toLocaleString()} كم
+                {sale.discount > 0 && (
+                  <div className="flex justify-between text-destructive">
+                    <span>الخصم</span>
+                    <span>-{sale.discount.toFixed(0)} ج.م</span>
                   </div>
+                )}
+                {sale.vat > 0 && (
+                  <div className="flex justify-between">
+                    <span>الضريبة (14%)</span>
+                    <span>{sale.vat.toFixed(0)} ج.م</span>
+                  </div>
+                )}
+                <div className="flex justify-between border-y-2 border-black py-1 text-xs font-extrabold my-1 text-black">
+                  <span>الإجمالي الكلي</span>
+                  <span>{sale.total.toFixed(0)} ج.م</span>
                 </div>
-              </>
-            )}
+                <div className="flex justify-between">
+                  <span>طريقة الدفع</span>
+                  <span>
+                    {sale.paymentMethod === "Mixed"
+                      ? "مختلط"
+                      : sale.paymentMethod === "Cash"
+                      ? "نقدي"
+                      : "كارت"}
+                  </span>
+                </div>
+                {sale.paymentMethod === "Mixed" && (
+                  <div className="text-[9px] text-muted-foreground flex justify-between pr-2 border-r border-dashed border-black/40">
+                    <span>نقدي: {sale.cashAmount?.toFixed(0)} ج.م</span>
+                    <span>كارت: {sale.cardAmount?.toFixed(0)} ج.م</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Next Change calculation conditional display */}
+              {sale.oilUsed && sale.oilMileage && (
+                <>
+                  <div className="my-2 border-t border-dashed border-black" />
+                  <div className="border border-black p-2 rounded text-center text-[10px] bg-black/[0.01]">
+                    <div className="font-bold text-black">تغيير الزيت القادم الموصى به ({sale.oilMileage.toLocaleString()} كم)</div>
+                    <div className="mt-1 text-base font-extrabold text-black tracking-wide">
+                      {(sale.km + sale.oilMileage).toLocaleString()} كم
+                    </div>
+                  </div>
+                </>
+              )}
 
-            <div className="my-2 border-t border-dashed border-black" />
-            <div className="text-center text-[10px] text-black font-bold whitespace-pre-line">
-              {settings.receiptFooter || "شكراً لزيارتكم — رافقتكم السلامة!"}
+              <div className="my-2 border-t border-dashed border-black" />
+              <div className="text-center text-[10px] text-black font-bold whitespace-pre-line">
+                {settings.receiptFooter || "شكراً لزيارتكم — رافقتكم السلامة!"}
+              </div>
             </div>
-          </div>
+          ))}
         </div>,
         document.body
       )}

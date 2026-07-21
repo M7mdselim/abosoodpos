@@ -332,6 +332,18 @@ app.put("/api/customers/:id", async (req, res) => {
   }
 });
 
+app.delete("/api/customers/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await query("DELETE FROM customer_cars WHERE customer_id = $1", [id]);
+    await query("DELETE FROM customers WHERE id = $1", [id]);
+    invalidateCache("customers");
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ----------------------------------------------------
 // 4. SHIFTS ENDPOINTS
 // ----------------------------------------------------
@@ -365,6 +377,37 @@ app.get("/api/shifts", async (req, res) => {
       if (s.actualCash !== null && s.actualCash !== undefined) s.actualCash = Number(s.actualCash);
       return s;
     });
+
+    for (const s of shifts) {
+      if (s.status === 'open') {
+        const salesRes = await query(
+          "SELECT total, payment_method, cash_amount, card_amount FROM sales WHERE shift_day = $1 AND status != 'voided'",
+          [s.shiftDay]
+        );
+        let count = 0;
+        let totalSum = 0;
+        let cashSum = 0;
+        let cardSum = 0;
+        salesRes.rows.forEach((row) => {
+          count++;
+          const t = Number(row.total);
+          totalSum += t;
+          if (row.payment_method === 'Cash') {
+            cashSum += row.cash_amount !== null ? Number(row.cash_amount) : t;
+          } else if (row.payment_method === 'Card') {
+            cardSum += row.card_amount !== null ? Number(row.card_amount) : t;
+          } else if (row.payment_method === 'Mixed') {
+            cashSum += Number(row.cash_amount || 0);
+            cardSum += Number(row.card_amount || 0);
+          }
+        });
+        s.salesCount = count;
+        s.salesTotal = totalSum;
+        s.cashSalesTotal = cashSum;
+        s.cardSalesTotal = cardSum;
+        s.expectedCash = s.openingCash + cashSum;
+      }
+    }
     cache.shifts = shifts;
     res.json(shifts);
   } catch (err) {
@@ -1068,6 +1111,85 @@ app.post("/api/dev/reset-db", async (req, res) => {
       lastAutoBackupDate: "",
       vatEnabled: "true",
       stockAlertsEnabled: "true",
+      carBrands: JSON.stringify([
+        { label: "تويوتا (Toyota)", value: "Toyota" },
+        { label: "هيونداي (Hyundai)", value: "Hyundai" },
+        { label: "كيا (Kia)", value: "Kia" },
+        { label: "نيسان (Nissan)", value: "Nissan" },
+        { label: "ميتسوبيشي (Mitsubishi)", value: "Mitsubishi" },
+        { label: "سوزوكي (Suzuki)", value: "Suzuki" },
+        { label: "هوندا (Honda)", value: "Honda" },
+        { label: "مازدا (Mazda)", value: "Mazda" },
+        { label: "إيسوزو (Isuzu)", value: "Isuzu" },
+        { label: "سوبارو (Subaru)", value: "Subaru" },
+        { label: "لكزس (Lexus)", value: "Lexus" },
+        { label: "سانج يونج / KGM (SsangYong)", value: "SsangYong" },
+        { label: "جينيسيس (Genesis)", value: "Genesis" },
+        { label: "ام جي (MG)", value: "MG" },
+        { label: "شيري (Chery)", value: "Chery" },
+        { label: "بي واي دي (BYD)", value: "BYD" },
+        { label: "جيلي (Geely)", value: "Geely" },
+        { label: "هافال (Haval)", value: "Haval" },
+        { label: "شانجان (Changan)", value: "Changan" },
+        { label: "جيتور (Jetour)", value: "Jetour" },
+        { label: "بايك (BAIC)", value: "BAIC" },
+        { label: "جاك (JAC)", value: "JAC" },
+        { label: "دونج فنج (Dongfeng)", value: "Dongfeng" },
+        { label: "سوفايست (Soueast)", value: "Soueast" },
+        { label: "فورثينج (Forthing)", value: "Forthing" },
+        { label: "بيستون / فاو (Bestune)", value: "Bestune" },
+        { label: "كايي (Kaiyi)", value: "Kaiyi" },
+        { label: "اكسيد (Exeed)", value: "Exeed" },
+        { label: "ديپال (Deepal)", value: "Deepal" },
+        { label: "جي اي سي (GAC Motors)", value: "GAC" },
+        { label: "مرسيدس (Mercedes-Benz)", value: "Mercedes-Benz" },
+        { label: "بي ام دبليو (BMW)", value: "BMW" },
+        { label: "فولكس فاجن (Volkswagen)", value: "Volkswagen" },
+        { label: "أوبل (Opel)", value: "Opel" },
+        { label: "سكودا (Skoda)", value: "Skoda" },
+        { label: "سيات (Seat)", value: "Seat" },
+        { label: "فيات (Fiat)", value: "Fiat" },
+        { label: "رينو (Renault)", value: "Renault" },
+        { label: "بيجو (Peugeot)", value: "Peugeot" },
+        { label: "ستروين (Citroën)", value: "Citroen" },
+        { label: "أودي (Audi)", value: "Audi" },
+        { label: "بورش (Porsche)", value: "Porsche" },
+        { label: "لاند روفر (Land Rover)", value: "Land Rover" },
+        { label: "جاكوار (Jaguar)", value: "Jaguar" },
+        { label: "فولفو (Volvo)", value: "Volvo" },
+        { label: "ألفا روميو (Alfa Romeo)", value: "Alfa Romeo" },
+        { label: "كوبرا (Cupra)", value: "Cupra" },
+        { label: "ميني (MINI)", value: "MINI" },
+        { label: "دي اس (DS)", value: "DS" },
+        { label: "شيفروليه (Chevrolet)", value: "Chevrolet" },
+        { label: "جيب (Jeep)", value: "Jeep" },
+        { label: "فورد (Ford)", value: "Ford" },
+        { label: "كاديلاك (Cadillac)", value: "Cadillac" },
+        { label: "جي ام سي (GMC)", value: "GMC" },
+        { label: "تسلا (Tesla)", value: "Tesla" },
+        { label: "كرايسلر (Chrysler)", value: "Chrysler" },
+        { label: "دودج (Dodge)", value: "Dodge" },
+        { label: "رام (RAM)", value: "RAM" },
+        { label: "🏍️ دايون (Dayun)", value: "Dayun" },
+        { label: "🏍️ حوا (Hawa)", value: "Hawa" },
+        { label: "🏍️ حلاوة (Halawa)", value: "Halawa" },
+        { label: "🏍️ بجاج / بوكسر (Bajaj / Boxer)", value: "Bajaj" },
+        { label: "🏍️ تيفياس (TVS)", value: "TVS" },
+        { label: "🛵 اس واي ام (SYM)", value: "SYM" },
+        { label: "🛵 كيمكو (Kymco)", value: "Kymco" },
+        { label: "🏍️ بنيلي (Benelli)", value: "Benelli" },
+        { label: "🏍️ زونتس (Zontes)", value: "Zontes" },
+        { label: "🏍️ ياماها (Yamaha)", value: "Yamaha" },
+        { label: "🏍️ هوندا موتوسيكلات (Honda Motorcycle)", value: "Honda Motorcycle" },
+        { label: "🏍️ كواساكي (Kawasaki)", value: "Kawasaki" },
+        { label: "🏍️ سوزوكي موتوسيكلات (Suzuki Motorcycle)", value: "Suzuki Motorcycle" },
+        { label: "🏍️ بي ام دبليو موتوسيكلات (BMW Motorrad)", value: "BMW Motorrad" },
+        { label: "🛵 فيسبا / بياجيو (Vespa / Piaggio)", value: "Vespa" },
+        { label: "🏍️ كاي واي (Keeway)", value: "Keeway" },
+        { label: "🏍️ سي اف موتو (CFMoto)", value: "CFMoto" },
+        { label: "🛺 توكتوك بجاج (Bajaj TukTuk)", value: "Bajaj TukTuk" },
+        { label: "🛺 تروسيكل (Tricycle)", value: "Tricycle" },
+      ]),
     };
 
     for (const key of Object.keys(defaultSettings)) {

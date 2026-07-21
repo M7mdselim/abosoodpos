@@ -1,6 +1,6 @@
 export interface SyncItem {
   id: string;
-  type: "create_sale" | "create_customer" | "update_customer" | "open_shift" | "close_shift" | "void_sale" | "update_payment" | "create_log" | "create_product" | "update_product" | "delete_product";
+  type: "create_sale" | "create_customer" | "update_customer" | "delete_customer" | "open_shift" | "close_shift" | "void_sale" | "update_payment" | "create_log" | "create_product" | "update_product" | "delete_product";
   payload: any;
   createdAt: string;
 }
@@ -191,6 +191,25 @@ class OfflineDb {
     } catch (err) {
       console.error(`IndexedDB error getting list from ${storeName}:`, err);
       return [];
+    }
+  }
+
+  async clearAll(): Promise<void> {
+    try {
+      const db = await this.getDB();
+      const storeNames = ["sync_queue", "customers", "products", "sales"];
+      return new Promise<void>((resolve) => {
+        const tx = db.transaction(storeNames, "readwrite");
+        storeNames.forEach((name) => {
+          if (db.objectStoreNames.contains(name)) {
+            tx.objectStore(name).clear();
+          }
+        });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+    } catch (err) {
+      console.error("IndexedDB error clearing all stores:", err);
     }
   }
 }

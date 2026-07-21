@@ -360,7 +360,12 @@ function ProductDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+      <DialogContent 
+        className="w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto" 
+        dir="rtl"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader className="text-right">
           <DialogTitle>{product ? "تعديل بيانات المنتج" : "إضافة منتج جديد"}</DialogTitle>
         </DialogHeader>

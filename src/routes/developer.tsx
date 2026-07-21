@@ -305,6 +305,23 @@ function DeveloperControlsPage() {
   const [receiptFontSize, setReceiptFontSize] = useState(currentSettings.receiptFontSize || 11);
   const [receiptFooter, setReceiptFooter] = useState(currentSettings.receiptFooter || "شكراً لزيارتكم — رافقتكم السلامة!");
   const [directPrint, setDirectPrint] = useState(currentSettings.directPrint ?? false);
+  const [receiptCopies, setReceiptCopies] = useState<number>(currentSettings.receiptCopies || 2);
+
+  const handleReceiptCopiesChange = (copies: number) => {
+    setReceiptCopies(copies);
+    const updated = {
+      ...store.settings,
+      receiptCopies: copies,
+    };
+    store.settings = updated;
+    backendService.saveSettings(updated).catch((err) => console.error("Error saving receipt copies in backend:", err));
+    router.invalidate();
+    toast.success(
+      language === "ar"
+        ? `تم تحديث عدد نسخ طباعة الفاتورة إلى: ${copies} ${copies === 1 ? "نسخة" : "نسخ"}`
+        : `Receipt copies updated to ${copies}`
+    );
+  };
 
   const handleSavePrinterSettings = () => {
     const updated = {
@@ -314,6 +331,7 @@ function DeveloperControlsPage() {
       receiptFontSize,
       receiptFooter,
       directPrint,
+      receiptCopies,
     };
     store.settings = updated;
     backendService.saveSettings(updated).catch((err) => console.error("Error saving printer settings in backend:", err));
@@ -479,7 +497,22 @@ function DeveloperControlsPage() {
                   <select
                     id="shiftMode"
                     value={shiftMode}
-                    onChange={(e) => setShiftMode(e.target.value as any)}
+                    onChange={(e) => {
+                      const newMode = e.target.value as "single" | "multiple";
+                      setShiftMode(newMode);
+                      const updated = {
+                        ...store.settings,
+                        shiftMode: newMode,
+                      };
+                      store.settings = updated;
+                      backendService.saveSettings(updated).catch((err) => console.error("Error saving shift mode in backend:", err));
+                      router.invalidate();
+                      toast.success(
+                        language === "ar"
+                          ? `تم حفظ وتفعيل نظام الورديات: ${newMode === "single" ? "وردية واحدة يومياً" : "ورديات متعددة يومياً"}`
+                          : `Shift mode saved: ${newMode === "single" ? "Single Shift/Day" : "Multiple Shifts/Day"}`
+                      );
+                    }}
                     className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="multiple">ورديات متعددة يومياً (Multiple Shifts/Day)</option>
@@ -746,6 +779,34 @@ function DeveloperControlsPage() {
                       checked={directPrint}
                       onCheckedChange={(checked) => setDirectPrint(checked)}
                     />
+                  </div>
+
+                  {/* Receipt Copies Select */}
+                  <div className="space-y-2 text-left pt-3 border-t border-border">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="receiptCopiesSelect" className="text-xs font-bold text-muted-foreground">
+                        {language === "ar" ? "عدد نسخ الطباعة تلقائياً عند التأكيد" : "Receipt Print Copies"}
+                      </Label>
+                      <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                        {receiptCopies} {language === "ar" ? (receiptCopies === 1 ? "نسخة" : "نسخ") : "copies"}
+                      </span>
+                    </div>
+                    <select
+                      id="receiptCopiesSelect"
+                      value={receiptCopies}
+                      onChange={(e) => handleReceiptCopiesChange(Number(e.target.value))}
+                      className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <option value={1}>نسخة واحدة فقط (1 Original Copy)</option>
+                      <option value={2}>نسختين (2 Copies — أصل للعميل + صورة للمحل)</option>
+                      <option value={3}>3 نسخ (3 Copies — أصل + نسختان)</option>
+                      <option value={4}>4 نسخ (4 Copies)</option>
+                    </select>
+                    <p className="text-[10px] text-muted-foreground">
+                      {language === "ar"
+                        ? "تحديد عدد نسخ الإيصال الحراري المطبوعة تلقائياً مع الفاصل بين كل نسخة والأخرى."
+                        : "Set how many receipt copies are automatically printed with page breaks in between."}
+                    </p>
                   </div>
                 </div>
 

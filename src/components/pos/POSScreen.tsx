@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Search, Plus, Minus, Trash2, X, Printer, CreditCard, Banknote, CheckCircle2, UserPlus, Zap, Play, ShoppingCart, Star, CalendarDays, Calendar, Eye, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Plus, Minus, Trash2, X, Printer, CreditCard, Banknote, CheckCircle2, UserPlus, Zap, Play, ShoppingCart, Star, CalendarDays, Calendar, Eye, ChevronDown, ChevronUp, ShoppingBag, User, Car } from "lucide-react";
 import { toast } from "sonner";
 
 import { productService } from "@/services/productService";
@@ -366,12 +366,8 @@ export function POSScreen() {
     shiftService.recordSale(total, method, cashAmount, cardAmount);
 
     setLastSale(sale);
-    if (directPrint) {
-      setIsPrintingDirect(true);
-    } else {
-      setReceiptOpen(true);
-    }
-    toast.success(`${t("success_sale")} — #${sale.invoiceNumber.replace("INV-", "")}`);
+    setIsPrintingDirect(true);
+    toast.success(`تمت الفاتورة #${sale.invoiceNumber.replace("INV-", "")} بنجاح — جاري طباعة النسختين...`);
   }
 
   return (
@@ -550,22 +546,22 @@ export function POSScreen() {
       {/* RIGHT: Invoice (Cart) */}
       <div
         className={cn(
-          "flex flex-col bg-card transition-all duration-300 ease-in-out overflow-hidden shrink-0",
+          "flex flex-col bg-card transition-all duration-300 ease-in-out overflow-hidden shrink-0 border-l border-border",
           cartOpen
-            ? "fixed inset-0 z-40 w-full sm:w-[420px] md:w-[460px] lg:relative lg:inset-auto lg:z-0 lg:w-[460px] border-l border-border shadow-2xl lg:shadow-none"
+            ? "fixed inset-0 z-40 w-full sm:w-[400px] md:w-[430px] lg:relative lg:inset-auto lg:z-0 lg:w-[400px] xl:w-[430px] shadow-2xl lg:shadow-none"
             : "hidden lg:flex lg:relative lg:inset-auto lg:w-0 lg:border-l-0"
         )}
       >
         {/* Customer section */}
-        <div className="border-b border-border p-3 relative">
-          <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+        <div className="border-b border-border p-2 relative bg-card">
+          <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
             <span>بحث وتعيين العميل</span>
             <button
               onClick={() => setCartOpen(false)}
-              className="p-1 rounded hover:bg-accent text-muted-foreground"
+              className="p-0.5 rounded hover:bg-accent text-muted-foreground"
               title="إخفاء السلة"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
           <div className="relative">
@@ -574,7 +570,7 @@ export function POSScreen() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="اكتب اسم العميل أو رقم التليفون..."
-              className="h-9 rounded-md border text-xs font-medium"
+              className="h-7.5 rounded-md border text-xs font-medium px-2 bg-background"
               inputMode="search"
             />
             {phone && (
@@ -584,7 +580,7 @@ export function POSScreen() {
                   setCustomer(null);
                   setNotFound(false);
                 }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -593,7 +589,7 @@ export function POSScreen() {
 
           {/* Autocomplete Dropdown List */}
           {customerSuggestions.length > 0 && (
-            <div className="absolute left-3 right-3 mt-1 max-h-48 overflow-y-auto rounded-lg border border-border bg-card shadow-lg z-50 p-1 divide-y divide-border">
+            <div className="absolute left-2 right-2 mt-1 max-h-48 overflow-y-auto rounded-md border border-border bg-card shadow-lg z-50 p-1 divide-y divide-border">
               {customerSuggestions.map((c) => (
                 <button
                   key={c.id}
@@ -604,7 +600,7 @@ export function POSScreen() {
                     setCurrentKm(c.cars?.[0]?.currentKm ?? c.currentKm);
                     setCustomerCollapsed(false);
                   }}
-                  className="flex w-full flex-col p-2 text-left rounded hover:bg-accent text-[11px] transition-colors"
+                  className="flex w-full flex-col p-1.5 text-left rounded hover:bg-accent text-[11px] transition-colors"
                 >
                   <div className="font-bold text-foreground">{c.name}</div>
                   <div className="text-muted-foreground text-[10px] mt-0.5">
@@ -617,12 +613,12 @@ export function POSScreen() {
           )}
 
           {customer && customerCollapsed && (
-            <div className="mt-2 flex items-center justify-between rounded-md bg-primary/5 px-2 py-1 text-xs">
-              <div className="flex items-center gap-1.5 text-right font-medium truncate flex-1">
-                <span className="font-bold text-foreground truncate">{customer.name}</span>
-                <span className="text-muted-foreground text-[10px] shrink-0">({customer.phone})</span>
+            <div className="mt-1 flex items-center justify-between rounded bg-primary/5 px-2 py-0.5 text-xs border border-primary/20">
+              <div className="flex items-center gap-1 text-right font-medium truncate flex-1">
+                <span className="font-bold text-foreground truncate text-[11px]">{customer.name}</span>
+                <span className="text-muted-foreground text-[9.5px] shrink-0">({customer.phone})</span>
                 {activeCar && (
-                  <span className="text-muted-foreground text-[10px] truncate shrink-0">
+                  <span className="text-primary text-[9.5px] font-semibold truncate shrink-0">
                     - {activeCar.brand} ({currentKm} كم)
                   </span>
                 )}
@@ -630,7 +626,7 @@ export function POSScreen() {
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCustomerCollapsed(false)}
-                  className="text-primary hover:underline text-[10px] font-bold px-1.5 py-0.5 rounded hover:bg-primary/10"
+                  className="text-primary hover:underline text-[9px] font-bold px-1 py-0.2 rounded bg-primary/10"
                 >
                   توسيع
                 </button>
@@ -642,48 +638,48 @@ export function POSScreen() {
                   }}
                   className="text-muted-foreground hover:text-destructive p-0.5 rounded hover:bg-destructive/10"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X className="h-3 w-3" />
                 </button>
               </div>
             </div>
           )}
 
           {customer && !customerCollapsed && (
-            <div className="mt-2 space-y-2 rounded-md bg-primary/5 p-2 text-xs relative">
-              {/* Header: Name and Phone side-by-side */}
-              <div className="flex items-center justify-between border-b border-border/40 pb-1.5">
-                <div className="flex flex-col text-right">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-foreground text-xs">{customer.name}</span>
-                    <button
-                      onClick={() => setCustomerCollapsed(true)}
-                      className="text-primary hover:underline text-[9px] font-bold px-1 rounded bg-primary/10"
-                    >
-                      تقليص
-                    </button>
-                  </div>
-                  <span className="text-muted-foreground text-[10px] mt-0.5">الهاتف: {customer.phone}</span>
+            <div className="mt-1 space-y-1 rounded bg-primary/5 p-1.5 text-xs border border-primary/20 relative">
+              {/* Header: Name, Phone, Actions */}
+              <div className="flex items-center justify-between pb-0.5 border-b border-border/30">
+                <div className="flex items-center gap-1 text-right truncate">
+                  <span className="font-bold text-foreground text-[11.5px] truncate">{customer.name}</span>
+                  <span className="text-muted-foreground text-[9.5px]">({customer.phone})</span>
                 </div>
-                <button
-                  onClick={() => {
-                    setCustomer(null);
-                    setPhone("");
-                    setCurrentKm("");
-                  }}
-                  className="text-muted-foreground hover:text-destructive p-1 rounded hover:bg-destructive/10"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => setCustomerCollapsed(true)}
+                    className="text-primary hover:underline text-[9px] font-bold px-1 rounded bg-primary/10 shrink-0"
+                  >
+                    تقليص
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCustomer(null);
+                      setPhone("");
+                      setCurrentKm("");
+                    }}
+                    className="text-muted-foreground hover:text-destructive p-0.5 rounded hover:bg-destructive/10 shrink-0"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
               </div>
 
-              {/* Cars Selector and Odometer side-by-side */}
-              <div className="grid grid-cols-2 gap-2 text-right">
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-[10px] text-muted-foreground font-bold">السيارة المختارة:</span>
+              {/* Cars Selector & Odometer */}
+              <div className="grid grid-cols-2 gap-1 text-right items-end">
+                <div>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[9px] text-muted-foreground font-bold">السيارة:</span>
                     <button
                       onClick={() => setAddCarOpen(true)}
-                      className="text-[9px] text-primary hover:underline font-bold"
+                      className="text-[8.5px] text-primary hover:underline font-bold"
                     >
                       + إضافة
                     </button>
@@ -692,7 +688,7 @@ export function POSScreen() {
                     <select
                       value={selectedCarId}
                       onChange={(e) => setSelectedCarId(e.target.value)}
-                      className="h-8 rounded border border-border bg-card text-[11px] font-semibold w-full px-1 focus:outline-none"
+                      className="h-6.5 rounded border border-border bg-card text-[10px] font-bold w-full px-1 focus:outline-none"
                     >
                       {customer.cars.map((car) => (
                         <option key={car.id} value={car.id}>
@@ -701,22 +697,22 @@ export function POSScreen() {
                       ))}
                     </select>
                   ) : (
-                    <div className="text-foreground text-[10px] font-bold bg-card border border-border/50 rounded px-1.5 py-1.5 flex items-center justify-between truncate h-8">
+                    <div className="text-foreground text-[10px] font-bold bg-card border border-border/50 rounded px-1 h-6.5 flex items-center justify-between truncate">
                       <span>{activeCar?.brand} {activeCar?.model}</span>
                     </div>
                   )}
                 </div>
 
                 {activeCar && (
-                  <div className="space-y-1">
-                    <Label className="text-[10px] text-muted-foreground font-bold block">{t("km")}</Label>
+                  <div>
+                    <Label className="text-[9px] text-muted-foreground font-bold block mb-0.5">{t("km")}</Label>
                     <Input
                       type="number"
                       value={currentKm}
                       onChange={(e) =>
                         setCurrentKm(e.target.value === "" ? "" : Number(e.target.value))
                       }
-                      className="h-8 text-xs font-bold text-center"
+                      className="h-6.5 text-[11px] font-bold text-center"
                     />
                   </div>
                 )}
@@ -724,43 +720,43 @@ export function POSScreen() {
 
               {/* Last service details */}
               {activeCar && (
-                <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-border/40 text-[10px] text-right">
-                  <div className="text-muted-foreground truncate">آخر زيارة: <span className="font-semibold text-foreground">{activeCar.lastServiceDate ?? "—"}</span></div>
-                  <div className="text-muted-foreground truncate" title={activeCar.lastOilUsed}>آخر زيت: <span className="font-semibold text-foreground">{activeCar.lastOilUsed ?? "—"}</span></div>
+                <div className="flex items-center justify-between pt-0.5 border-t border-border/30 text-[9px] text-muted-foreground">
+                  <div className="truncate">آخر زيارة: <span className="font-semibold text-foreground">{activeCar.lastServiceDate ?? "—"}</span></div>
+                  <div className="truncate max-w-[160px]" title={activeCar.lastOilUsed}>آخر زيت: <span className="font-semibold text-foreground">{activeCar.lastOilUsed ?? "—"}</span></div>
                 </div>
               )}
             </div>
           )}
           {notFound && !customer && (
-            <div className="mt-2 rounded bg-destructive/5 border border-dashed border-destructive/30 p-2 text-xs">
-              <div className="mb-1.5 font-semibold text-destructive">العميل غير مسجل</div>
+            <div className="mt-1 rounded bg-destructive/5 border border-dashed border-destructive/30 p-1 text-xs flex items-center justify-between">
+              <span className="font-semibold text-destructive text-[10.5px]">العميل غير مسجل</span>
               <Button
                 onClick={() => setNewCustomerOpen(true)}
-                className="w-full h-8 text-xs"
+                className="h-6 text-[10px] px-2"
                 size="sm"
               >
-                <UserPlus className="mr-1 h-3.5 w-3.5" /> إنشاء عميل جديد
+                <UserPlus className="mr-1 h-3 w-3" /> جديد
               </Button>
             </div>
           )}
         </div>
 
         {/* Cart items */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        <div className="flex-1 overflow-y-auto p-2 space-y-1.5" dir="rtl">
           {items.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
-              <div className="text-3xl">🧾</div>
-              <div className="mt-1.5 text-xs">{t("cart_empty")}.<br />انقر على منتج لإضافته.</div>
+              <div className="text-2xl">🧾</div>
+              <div className="mt-1 text-xs">{t("cart_empty")}.<br />انقر على منتج لإضافته.</div>
             </div>
           ) : (
             <div className="space-y-1.5">
               {items.map((it) => (
                 <div
                   key={it.productId}
-                  className="rounded-md border border-border bg-background p-2"
+                  className="rounded-md border border-border bg-card p-2"
                 >
                   <div className="flex items-start justify-between gap-1">
-                    <div className="min-w-0 flex-1 text-left">
+                    <div className="min-w-0 flex-1 text-right">
                       <div className="truncate text-xs font-bold leading-tight" title={it.name}>{it.name}</div>
                       <div className="text-[10px] text-muted-foreground">
                         {formatCurrency(it.unitPrice)} للوحدة
@@ -801,10 +797,10 @@ export function POSScreen() {
         </div>
 
         {/* Totals */}
-        <div className="border-t border-border bg-background p-3">
-          <div className="space-y-1 text-xs">
+        <div className="border-t border-border bg-card p-2 space-y-1.5">
+          <div className="space-y-0.5 text-[11px]">
             <Row label={t("subtotal")} value={formatCurrency(subtotal)} />
-             <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between">
               <span className="text-muted-foreground">{t("discount")}</span>
               <Input
                 type="number"
@@ -812,18 +808,19 @@ export function POSScreen() {
                 value={discount || ""}
                 onChange={(e) => setDiscount(Number(e.target.value) || 0)}
                 disabled={!canMakeDiscount}
+                placeholder="0"
                 title={!canMakeDiscount ? "لا تملك صلاحية إجراء خصم" : ""}
-                className="h-7 w-20 text-right font-bold text-xs disabled:opacity-50 disabled:bg-muted"
+                className="h-6 w-16 text-right font-bold text-[10px] disabled:opacity-50 disabled:bg-muted bg-card px-1"
               />
             </div>
             <Row label={vatEnabled ? t("vat") : "الضريبة (معطلة)"} value={formatCurrency(vat)} />
-            <div className="mt-1 flex items-center justify-between border-t border-border pt-2 text-lg font-bold">
+            <div className="mt-1 flex items-center justify-between border-t border-border pt-1 text-sm font-extrabold">
               <span>{t("total")}</span>
-              <span className="text-primary">{formatCurrency(total)}</span>
+              <span className="text-primary text-base font-black">{formatCurrency(total)}</span>
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-1.5">
+          <div className="mt-1.5 space-y-1">
             <button
               onClick={() => {
                 if (!activeShift) {
@@ -840,29 +837,31 @@ export function POSScreen() {
                 }
                 setCheckoutOpen(true);
               }}
-              className="col-span-2 flex h-11 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 text-sm font-bold text-white shadow hover:bg-emerald-700 active:scale-[0.98]"
+              className="w-full flex h-9 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white shadow active:scale-[0.98] transition-all"
             >
               <Banknote className="h-4 w-4" /> دفع وقبض الفاتورة (Checkout)
             </button>
-            <button
-              onClick={() => {
-                if (items.length === 0) {
-                  toast.error("يرجى إضافة منتجات أولاً");
-                  return;
-                }
-                setDraftReceiptOpen(true);
-              }}
-              className="flex h-9 items-center justify-center gap-1 rounded-lg bg-blue-600/10 text-xs font-bold text-blue-700 hover:bg-blue-600 hover:text-white"
-            >
-              <Eye className="h-3.5 w-3.5" /> معاينة الفاتورة
-            </button>
-            <button
-              onClick={clearInvoice}
-              className="flex h-9 items-center justify-center gap-1 rounded-lg bg-destructive/10 text-xs font-bold text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            >
-              <Trash2 className="h-3.5 w-3.5" /> مسح الفاتورة
-            </button>
 
+            <div className="grid grid-cols-2 gap-1">
+              <button
+                onClick={() => {
+                  if (items.length === 0) {
+                    toast.error("يرجى إضافة منتجات أولاً");
+                    return;
+                  }
+                  setDraftReceiptOpen(true);
+                }}
+                className="flex h-7.5 items-center justify-center gap-1 rounded bg-blue-600/10 text-[11px] font-bold text-blue-700 hover:bg-blue-600 hover:text-white transition-all"
+              >
+                <Eye className="h-3 w-3" /> معاينة الفاتورة
+              </button>
+              <button
+                onClick={clearInvoice}
+                className="flex h-7.5 items-center justify-center gap-1 rounded bg-destructive/10 text-[11px] font-bold text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all"
+              >
+                <Trash2 className="h-3 w-3" /> مسح الفاتورة
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -985,7 +984,12 @@ function NewCustomerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
+      <DialogContent 
+        className="w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto" 
+        dir="rtl"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader className="text-right">
           <DialogTitle>تسجيل عميل جديد</DialogTitle>
         </DialogHeader>
@@ -1064,7 +1068,12 @@ function AddCarDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:max-w-md" dir="rtl">
+      <DialogContent 
+        className="w-[95vw] sm:max-w-md" 
+        dir="rtl"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader className="text-right">
           <DialogTitle>إضافة سيارة جديدة للعميل: {customerName}</DialogTitle>
         </DialogHeader>
@@ -1368,233 +1377,131 @@ function ReceiptDialog({
             }
           `}</style>
 
-          {/* Copy 1: Shop Copy */}
-          <div className="receipt-single-copy">
-            {/* Header */}
-            <div className="text-center mb-1">
-              {settings.logoUrl && (
-                <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white" />
+          {Array.from({ length: settings.receiptCopies || 2 }).map((_, copyIdx) => (
+            <div key={copyIdx} className="receipt-single-copy">
+              {copyIdx > 0 && (
+                <div 
+                  className="my-6 border-t-2 border-dashed border-black" 
+                  style={{ pageBreakBefore: "always", breakBefore: "page" }} 
+                />
               )}
-              <div className="text-sm font-black text-black">{settings.companyNameAr}</div>
-              <div className="text-[10px] mt-0.5 font-semibold text-black">{settings.sloganAr}</div>
-              <div className="text-[9px] mt-1 text-black font-medium">
-                {settings.phone && `ت: ${settings.phone}`}
-                {settings.phone && settings.address && " | "}
-                {settings.address && `${settings.address}`}
-              </div>
-            </div>
-            
-            <div className="my-2 border-t-2 border-dashed border-black" />
-            
-            {/* Metadata */}
-            <div className="grid grid-cols-2 gap-y-1 text-[10px] text-black">
-              <div><b>رقم الفاتورة:</b></div>
-              <div className="text-left font-bold">#{sale.invoiceNumber.replace("INV-", "")}</div>
-              <div><b>التاريخ والوقت:</b></div>
-              <div className="text-left">
-                {new Date(sale.date).toLocaleDateString("ar-EG")} {new Date(sale.date).toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
-              </div>
-              <div><b>أمين الصندوق:</b></div>
-              <div className="text-left">{sale.cashierName}</div>
-            </div>
-            
-            <div className="my-2 border-t border-dashed border-black" />
-            
-            {/* Customer */}
-            <div className="text-[10px] text-right leading-tight space-y-0.5 bg-black/[0.01] p-1.5 border border-dashed border-black rounded">
-              <div><b>العميل:</b> {sale.customerName}</div>
-              <div><b>الهاتف:</b> {sale.customerPhone}</div>
-              <div><b>السيارة:</b> {sale.carBrand} {sale.carModel} — {sale.km.toLocaleString()} كم</div>
-            </div>
-            
-            <div className="my-2 border-t border-dashed border-black" />
-            
-            {/* Product Items Table */}
-            <table className="w-full text-[10px] text-black border-collapse">
-              <thead>
-                <tr className="border-b border-black text-right font-bold">
-                  <th className="py-1 text-right w-[45%]">البند</th>
-                  <th className="py-1 text-center w-[15%]">الكمية</th>
-                  <th className="py-1 text-left w-[20%] font-bold">السعر</th>
-                  <th className="py-1 text-left w-[20%] font-bold">الإجمالي</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sale.items.map((it) => (
-                  <tr key={it.productId} className="border-b border-dashed border-black/20">
-                    <td className="py-1 text-right">{it.name}</td>
-                    <td className="py-1 text-center">{it.quantity}</td>
-                    <td className="py-1 text-left">{it.unitPrice.toFixed(0)}</td>
-                    <td className="py-1 text-left font-bold">{(it.quantity * it.unitPrice).toFixed(0)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            
-            <div className="my-2 border-t border-dashed border-black" />
-            
-            {/* Totals */}
-            <div className="space-y-1 text-[10px] text-black">
-              <Row label="الإجمالي الفرعي" value={`${sale.subtotal.toFixed(0)} ج.م`} />
-              {sale.discount > 0 && <Row label="الخصم" value={`-${sale.discount.toFixed(0)} ج.م`} />}
-              {sale.vat > 0 && <Row label="الضريبة (14%)" value={`${sale.vat.toFixed(0)} ج.م`} />}
-              <div className="flex justify-between border-y-2 border-black py-1 text-xs font-extrabold my-1 text-black">
-                <span>الإجمالي الكلي</span>
-                <span>{sale.total.toFixed(0)} ج.م</span>
-              </div>
-              <Row
-                label="طريقة الدفع"
-                value={
-                  sale.paymentMethod === "Mixed"
-                    ? "مختلط"
-                    : sale.paymentMethod === "Cash"
-                    ? "نقدي"
-                    : "كارت"
-                }
-              />
-              {sale.paymentMethod === "Mixed" && (
-                <div className="text-[9px] text-muted-foreground flex justify-between pr-2 border-r border-dashed border-black/40">
-                  <span>نقدي: {sale.cashAmount?.toFixed(0)} ج.م</span>
-                  <span>كارت: {sale.cardAmount?.toFixed(0)} ج.م</span>
-                </div>
-              )}
-            </div>
-            
-            {/* Conditional Next Recommended Change Calculation */}
-            {sale.oilUsed && sale.oilMileage && (
-              <>
-                <div className="my-2 border-t border-dashed border-black" />
-                <div className="border border-black p-2 rounded text-center text-[10px] bg-black/[0.01]">
-                  <div className="font-bold text-black">تغيير الزيت القادم الموصى به ({sale.oilMileage.toLocaleString()} كم)</div>
-                  <div className="mt-1 text-base font-extrabold text-black tracking-wide">
-                    {(sale.km + sale.oilMileage).toLocaleString()} كم
-                  </div>
-                </div>
-              </>
-            )}
-            
-            <div className="my-2 border-t border-dashed border-black" />
-            <div className="text-center text-[10px] text-black font-bold whitespace-pre-line">
-              {settings.receiptFooter || "شكراً لزيارتكم — رافقتكم السلامة!"}
-            </div>
-          </div>
 
-          {/* Page Break & Divider for Second Copy */}
-          <div 
-            className="my-6 border-t-2 border-dashed border-black" 
-            style={{ pageBreakBefore: "always", breakBefore: "page" }} 
-          />
+              {/* Copy Indicator Header Banner (Only on 2nd and subsequent copies) */}
+              {copyIdx >= 1 && (
+                <div className="text-center font-black text-xs border border-black rounded py-0.5 mb-1.5 tracking-widest uppercase bg-black/[0.02]">
+                  COPY
+                </div>
+              )}
 
-          {/* Copy 2: Customer Copy */}
-          <div className="receipt-single-copy">
-            {/* Header */}
-            <div className="text-center mb-1">
-              {settings.logoUrl && (
-                <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white" />
-              )}
-              <div className="text-sm font-black text-black">{settings.companyNameAr}</div>
-              <div className="text-[10px] mt-0.5 font-semibold text-black">{settings.sloganAr}</div>
-              <div className="text-[9px] mt-1 text-black font-medium">
-                {settings.phone && `ت: ${settings.phone}`}
-                {settings.phone && settings.address && " | "}
-                {settings.address && `${settings.address}`}
+              {/* Header */}
+              <div className="text-center mb-1">
+                {settings.logoUrl && (
+                  <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 rounded-full object-cover mx-auto mb-1.5 border border-border bg-white" />
+                )}
+                <div className="text-sm font-black text-black">{settings.companyNameAr}</div>
+                <div className="text-[10px] mt-0.5 font-semibold text-black">{settings.sloganAr}</div>
+                <div className="text-[9px] mt-1 text-black font-medium">
+                  {settings.phone && `ت: ${settings.phone}`}
+                  {settings.phone && settings.address && " | "}
+                  {settings.address && `${settings.address}`}
+                </div>
               </div>
-            </div>
-            
-            <div className="my-2 border-t-2 border-dashed border-black" />
-            
-            {/* Metadata */}
-            <div className="grid grid-cols-2 gap-y-1 text-[10px] text-black">
-              <div><b>رقم الفاتورة:</b></div>
-              <div className="text-left font-bold">#{sale.invoiceNumber.replace("INV-", "")}</div>
-              <div><b>التاريخ والوقت:</b></div>
-              <div className="text-left">
-                {new Date(sale.date).toLocaleDateString("ar-EG")} {new Date(sale.date).toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
+              
+              <div className="my-2 border-t-2 border-dashed border-black" />
+              
+              {/* Metadata */}
+              <div className="grid grid-cols-2 gap-y-1 text-[10px] text-black">
+                <div><b>رقم الفاتورة:</b></div>
+                <div className="text-left font-bold">#{sale.invoiceNumber.replace("INV-", "")}</div>
+                <div><b>التاريخ والوقت:</b></div>
+                <div className="text-left">
+                  {new Date(sale.date).toLocaleDateString("ar-EG")} {new Date(sale.date).toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit' })}
+                </div>
+                <div><b>أمين الصندوق:</b></div>
+                <div className="text-left">{sale.cashierName}</div>
               </div>
-              <div><b>أمين الصندوق:</b></div>
-              <div className="text-left">{sale.cashierName}</div>
-            </div>
-            
-            <div className="my-2 border-t border-dashed border-black" />
-            
-            {/* Customer */}
-            <div className="text-[10px] text-right leading-tight space-y-0.5 bg-black/[0.01] p-1.5 border border-dashed border-black rounded">
-              <div><b>العميل:</b> {sale.customerName}</div>
-              <div><b>الهاتف:</b> {sale.customerPhone}</div>
-              <div><b>السيارة:</b> {sale.carBrand} {sale.carModel} — {sale.km.toLocaleString()} كم</div>
-            </div>
-            
-            <div className="my-2 border-t border-dashed border-black" />
-            
-            {/* Product Items Table */}
-            <table className="w-full text-[10px] text-black border-collapse">
-              <thead>
-                <tr className="border-b border-black text-right font-bold">
-                  <th className="py-1 text-right w-[45%]">البند</th>
-                  <th className="py-1 text-center w-[15%]">الكمية</th>
-                  <th className="py-1 text-left w-[20%] font-bold">السعر</th>
-                  <th className="py-1 text-left w-[20%] font-bold">الإجمالي</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sale.items.map((it) => (
-                  <tr key={it.productId} className="border-b border-dashed border-black/20">
-                    <td className="py-1 text-right">{it.name}</td>
-                    <td className="py-1 text-center">{it.quantity}</td>
-                    <td className="py-1 text-left">{it.unitPrice.toFixed(0)}</td>
-                    <td className="py-1 text-left font-bold">{(it.quantity * it.unitPrice).toFixed(0)}</td>
+              
+              <div className="my-2 border-t border-dashed border-black" />
+              
+              {/* Customer */}
+              <div className="text-[10px] text-right leading-tight space-y-0.5 bg-black/[0.01] p-1.5 border border-dashed border-black rounded">
+                <div><b>العميل:</b> {sale.customerName}</div>
+                <div><b>الهاتف:</b> {sale.customerPhone}</div>
+                <div><b>السيارة:</b> {sale.carBrand} {sale.carModel} — {sale.km.toLocaleString()} كم</div>
+              </div>
+              
+              <div className="my-2 border-t border-dashed border-black" />
+              
+              {/* Product Items Table */}
+              <table className="w-full text-[10px] text-black border-collapse">
+                <thead>
+                  <tr className="border-b border-black text-right font-bold">
+                    <th className="py-1 text-right w-[45%]">البند</th>
+                    <th className="py-1 text-center w-[15%]">الكمية</th>
+                    <th className="py-1 text-left w-[20%] font-bold">السعر</th>
+                    <th className="py-1 text-left w-[20%] font-bold">الإجمالي</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            
-            <div className="my-2 border-t border-dashed border-black" />
-            
-            {/* Totals */}
-            <div className="space-y-1 text-[10px] text-black">
-              <Row label="الإجمالي الفرعي" value={`${sale.subtotal.toFixed(0)} ج.م`} />
-              {sale.discount > 0 && <Row label="الخصم" value={`-${sale.discount.toFixed(0)} ج.م`} />}
-              {sale.vat > 0 && <Row label="الضريبة (14%)" value={`${sale.vat.toFixed(0)} ج.م`} />}
-              <div className="flex justify-between border-y-2 border-black py-1 text-xs font-extrabold my-1 text-black">
-                <span>الإجمالي الكلي</span>
-                <span>{sale.total.toFixed(0)} ج.م</span>
-              </div>
-              <Row
-                label="طريقة الدفع"
-                value={
-                  sale.paymentMethod === "Mixed"
-                    ? "مختلط"
-                    : sale.paymentMethod === "Cash"
-                    ? "نقدي"
-                    : "كارت"
-                }
-              />
-              {sale.paymentMethod === "Mixed" && (
-                <div className="text-[9px] text-muted-foreground flex justify-between pr-2 border-r border-dashed border-black/40">
-                  <span>نقدي: {sale.cashAmount?.toFixed(0)} ج.م</span>
-                  <span>كارت: {sale.cardAmount?.toFixed(0)} ج.م</span>
+                </thead>
+                <tbody>
+                  {sale.items.map((it) => (
+                    <tr key={it.productId} className="border-b border-dashed border-black/20">
+                      <td className="py-1 text-right">{it.name}</td>
+                      <td className="py-1 text-center">{it.quantity}</td>
+                      <td className="py-1 text-left">{it.unitPrice.toFixed(0)}</td>
+                      <td className="py-1 text-left font-bold">{(it.quantity * it.unitPrice).toFixed(0)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              
+              <div className="my-2 border-t border-dashed border-black" />
+              
+              {/* Totals */}
+              <div className="space-y-1 text-[10px] text-black">
+                <Row label="الإجمالي الفرعي" value={`${sale.subtotal.toFixed(0)} ج.م`} />
+                {sale.discount > 0 && <Row label="الخصم" value={`-${sale.discount.toFixed(0)} ج.م`} />}
+                {sale.vat > 0 && <Row label="الضريبة (14%)" value={`${sale.vat.toFixed(0)} ج.م`} />}
+                <div className="flex justify-between border-y-2 border-black py-1 text-xs font-extrabold my-1 text-black">
+                  <span>الإجمالي الكلي</span>
+                  <span>{sale.total.toFixed(0)} ج.م</span>
                 </div>
-              )}
-            </div>
-            
-            {/* Conditional Next Recommended Change Calculation */}
-            {sale.oilUsed && sale.oilMileage && (
-              <>
-                <div className="my-2 border-t border-dashed border-black" />
-                <div className="border border-black p-2 rounded text-center text-[10px] bg-black/[0.01]">
-                  <div className="font-bold text-black">تغيير الزيت القادم الموصى به ({sale.oilMileage.toLocaleString()} كم)</div>
-                  <div className="mt-1 text-base font-extrabold text-black tracking-wide">
-                    {(sale.km + sale.oilMileage).toLocaleString()} كم
+                <Row
+                  label="طريقة الدفع"
+                  value={
+                    sale.paymentMethod === "Mixed"
+                      ? "مختلط"
+                      : sale.paymentMethod === "Cash"
+                      ? "نقدي"
+                      : "كارت"
+                  }
+                />
+                {sale.paymentMethod === "Mixed" && (
+                  <div className="text-[9px] text-muted-foreground flex justify-between pr-2 border-r border-dashed border-black/40">
+                    <span>نقدي: {sale.cashAmount?.toFixed(0)} ج.م</span>
+                    <span>كارت: {sale.cardAmount?.toFixed(0)} ج.م</span>
                   </div>
-                </div>
-              </>
-            )}
-            
-            <div className="my-2 border-t border-dashed border-black" />
-            <div className="text-center text-[10px] text-black font-bold whitespace-pre-line">
-              {settings.receiptFooter || "شكراً لزيارتكم — رافقتكم السلامة!"}
+                )}
+              </div>
+              
+              {/* Conditional Next Recommended Change Calculation */}
+              {sale.oilUsed && sale.oilMileage && (
+                <>
+                  <div className="my-2 border-t border-dashed border-black" />
+                  <div className="border border-black p-2 rounded text-center text-[10px] bg-black/[0.01]">
+                    <div className="font-bold text-black">تغيير الزيت القادم الموصى به ({sale.oilMileage.toLocaleString()} كم)</div>
+                    <div className="mt-1 text-base font-extrabold text-black tracking-wide">
+                      {(sale.km + sale.oilMileage).toLocaleString()} كم
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              <div className="my-2 border-t border-dashed border-black" />
+              <div className="text-center text-[10px] text-black font-bold whitespace-pre-line">
+                {settings.receiptFooter || "شكراً لزيارتكم — رافقتكم السلامة!"}
+              </div>
             </div>
-          </div>
+          ))}
         </div>,
         document.body
       )}

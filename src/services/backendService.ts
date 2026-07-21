@@ -54,8 +54,25 @@ export const backendService = {
         if (settings.categories && Array.isArray(settings.categories)) {
           store.setCategoriesFromSync(settings.categories);
         }
-        if (settings.carBrands && Array.isArray(settings.carBrands)) {
-          store.setCarBrandsFromSync(settings.carBrands);
+        if (settings.carBrands) {
+          let brands = settings.carBrands;
+          if (typeof brands === "string") {
+            try {
+              brands = JSON.parse(brands);
+            } catch (e) {
+              console.error("Error parsing carBrands from DB:", e);
+            }
+          }
+          if (Array.isArray(brands) && brands.length > 0) {
+            store.setCarBrandsFromSync(brands);
+          }
+        } else {
+          // Push initial car brands to DB if not present
+          fetch("/api/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ carBrands: store.carBrands }),
+          }).catch((err) => console.error("Error pushing default carBrands to DB:", err));
         }
       }
 
@@ -199,6 +216,22 @@ export const backendService = {
     } catch (err) {
       console.warn("Failed to update customer online, queueing offline:", err);
       await offlineDb.addToQueue("update_customer", customer);
+    }
+  },
+
+  async deleteCustomer(id: string): Promise<void> {
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      await offlineDb.addToQueue("delete_customer", { id });
+      return;
+    }
+    try {
+      const res = await fetch(`/api/customers/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Server rejected customer deletion");
+    } catch (err) {
+      console.warn("Failed to delete customer online, queueing offline:", err);
+      await offlineDb.addToQueue("delete_customer", { id });
     }
   },
 

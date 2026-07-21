@@ -38,11 +38,41 @@ export const shiftService = {
     if (!stored) return [];
     try {
       const parsed = JSON.parse(stored) as Shift[];
-      // Backwards compatibility for legacy shifts that didn't have shiftDay
-      return parsed.map((s) => ({
-        ...s,
-        shiftDay: s.shiftDay || s.startTime.split("T")[0],
-      }));
+      return parsed.map((s) => {
+        const shiftDay = s.shiftDay || s.startTime.split("T")[0];
+        if (s.status === "open") {
+          const sales = store.sales.filter(
+            (sale) => sale.shiftDay === shiftDay && sale.status !== "voided"
+          );
+          let cashSum = 0;
+          let cardSum = 0;
+          let totalSum = 0;
+          sales.forEach((sale) => {
+            totalSum += sale.total;
+            if (sale.paymentMethod === "Cash") {
+              cashSum += sale.cashAmount !== undefined && sale.cashAmount !== null ? sale.cashAmount : sale.total;
+            } else if (sale.paymentMethod === "Card") {
+              cardSum += sale.cardAmount !== undefined && sale.cardAmount !== null ? sale.cardAmount : sale.total;
+            } else if (sale.paymentMethod === "Mixed") {
+              cashSum += sale.cashAmount || 0;
+              cardSum += sale.cardAmount || 0;
+            }
+          });
+          return {
+            ...s,
+            shiftDay,
+            salesCount: sales.length,
+            salesTotal: totalSum,
+            cashSalesTotal: cashSum,
+            cardSalesTotal: cardSum,
+            expectedCash: (s.openingCash || 0) + cashSum,
+          };
+        }
+        return {
+          ...s,
+          shiftDay,
+        };
+      });
     } catch {
       return [];
     }

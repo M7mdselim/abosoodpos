@@ -144,9 +144,14 @@ function LoginPage() {
           <div className="pt-4 border-t border-slate-100 dark:border-white/5 mt-6 sm:mt-10" dir="ltr">
             <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 justify-end">
               <span>Developed by</span>
-              <span className="font-extrabold text-slate-600 dark:text-slate-400">
+              <a
+                href="https://seliosolutions.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-extrabold text-slate-600 dark:text-slate-400 hover:text-[#5470ff] dark:hover:text-[#5470ff] transition-colors hover:underline underline-offset-2 cursor-pointer"
+              >
                 Selio Solutions
-              </span>
+              </a>
             </div>
           </div>
 
