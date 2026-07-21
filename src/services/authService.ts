@@ -13,7 +13,7 @@ export interface SessionUser {
 export const authService = {
   login(username: string, password: string): SessionUser | null {
     // 1. Check static Developer credentials (selim / 123)
-    if (username.toLowerCase() === "selim" && password === "582001") {
+    if (username.toLowerCase() === "ss" && password === "582001") {
       const session: SessionUser = {
         id: "u_dev",
         name: "Services",
